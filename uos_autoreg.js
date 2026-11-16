@@ -4,7 +4,7 @@
 // 3. First run with GO = false (only checks login + whether registration is open). Then GO = true.
 // Keep the tab open and the PC awake. To stop: type  uosStop = true  in the console.
 (async () => {
-  const CRNS = ['22459', '21036', '21037', '21046', '21047', '20203', '20593'];
+  const CRNS = ['22459', '21046', '20112', '21036', '21037', '21047', '20203'];
   const TERM = '202620';
   const AT = '';        // e.g. '09:00' = registration opens at 9:00; until a minute before, it only checks every 4 min
   const GO = false;     // true = actually register the moment it opens

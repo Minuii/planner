@@ -132,7 +132,7 @@ already has.
 1. A few minutes before registration opens, sign in to **Register for Classes** in Chrome.
 2. Open `uos_autoreg.js` in Notepad and set the four lines at the top:
    ```js
-   const CRNS = ['22459', '21036', '21037', '21046', '21047', '20203', '20593'];  // your plan
+   const CRNS = ['22459', '21046', '20112', '21036', '21037', '21047', '20203'];  // your plan
    const TERM = '202620';
    const AT = '09:00';   // the time registration opens (24-hour, e.g. '14:00')
    const GO = true;      // actually register
