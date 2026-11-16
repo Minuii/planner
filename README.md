@@ -1,6 +1,7 @@
 # UoS Registration Toolkit (Spring 2026/2027)
 
 Tools for planning a University of Sharjah timetable and registering for it.
+n**Live planner:** https://minuii.github.io/planner/ (fresh UoS data every ~15 min via GitHub Actions).
 
 | File | What it is |
 |---|---|
