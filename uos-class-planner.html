@@ -601,18 +601,21 @@ function renderSearch(){
   const q=$('#courseSearch').value.trim().toLowerCase(),out=$('#searchResults');
   if(!q||!DATA){out.innerHTML=q&&!DATA?'<div class="empty">Load class data first (Get class data).</div>':'';return;}
   const qd=q.replace(/[\s-]/g,'');
+  const words=q.split(/[\s,]+/).filter(Boolean),isProf=n=>{const s=(n+' '+pretty(n)).toLowerCase();return words.every(w=>s.includes(w));};
   const hits=[];
   for(const c of COURSES.values()){
     const k=c.key,t=c.title.toLowerCase();
-    let score=0;
+    let score=0,prof=null;
     if(/^\d+$/.test(qd)&&k.startsWith(qd))score=3;
     else if(t.includes(q))score=2;
     else if(c.subjDesc.toLowerCase().includes(q))score=1.5;
-    else if(c.instr.some(n=>n.toLowerCase().includes(q)||pretty(n).toLowerCase().includes(q)))score=1;
-    if(score)hits.push([score,c]);
+    else if((prof=c.instr.find(isProf)))score=1;
+    if(score)hits.push([score,c,prof]);
   }
   hits.sort((a,b)=>b[0]-a[0]||a[1].key.localeCompare(b[1].key));
-  out.innerHTML=hits.length?hits.slice(0,40).map(([,c])=>{const on=S.courses.includes(c.key);return `<div class="res"><div class="t"><div><b>${code(c)}</b> ${esc(c.title)}</div><div class="tiny muted">${c.cr} cr · ${c.pkgs.length} option${c.pkgs.length==1?'':'s'}</div></div><button class="small${on?'':' primary'}" data-add="${c.key}"${on?' disabled':''}>${on?'Added':'Add'}</button></div>`}).join('')+(hits.length>40?`<div class="empty">${hits.length-40} more, keep typing…</div>`:''):'<div class="empty">No matching courses in the loaded data.</div>';
+  out.innerHTML=hits.length?hits.slice(0,40).map(([,c,prof])=>{const on=S.courses.includes(c.key);
+    const who=prof?`<div class="tiny">${esc(pretty(prof))} · sec ${c.secs.filter(s=>s.instr.includes(prof)).map(s=>esc(s.seq)).join(', ')}</div>`:'';
+    return `<div class="res"><div class="t"><div><b>${code(c)}</b> ${esc(c.title)}</div>${who}<div class="tiny muted">${c.cr} cr · ${c.pkgs.length} option${c.pkgs.length==1?'':'s'}</div></div><button class="small${on?'':' primary'}" data-add="${c.key}"${prof?` data-with="${esc(prof)}" title="Adds the course and ticks ${esc(pretty(prof))} under Preferred professors"`:''}${on?' disabled':''}>${on?'Added':prof?'Add with prof':'Add'}</button></div>`}).join('')+(hits.length>40?`<div class="empty">${hits.length-40} more, keep typing…</div>`:''):'<div class="empty">No matching courses or professors in the loaded data.</div>';
 }
 function renderMyCourses(){
   const el=$('#myCourses');
@@ -831,7 +834,7 @@ function openGet(){
 document.addEventListener('click',e=>{
   const t=e.target.closest('button,[data-day],[data-campus],[data-grp]');if(!t)return;
   const d=t.dataset;
-  if(d.add){addCourse(d.add);$('#courseSearch').focus();update();}
+  if(d.add){addCourse(d.add);if(d.with&&!S.filters.profs.includes(d.with))S.filters.profs.push(d.with);$('#courseSearch').focus();update();}
   else if(d.rm){S.courses=S.courses.filter(k=>k!==d.rm);delete S.picks[d.rm];update();}
   else if(d.pick){togglePick(d.pick);}
   else if(d.ex){if(S.excluded[d.ex])delete S.excluded[d.ex];else S.excluded[d.ex]=1;update();}
