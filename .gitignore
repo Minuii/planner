@@ -1,0 +1,6 @@
+uos_cookie.txt
+__pycache__/
+uos-classes-*.json
+uos-planner-*.html
+_site/
+.claude/

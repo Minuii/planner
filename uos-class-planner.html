@@ -1,0 +1,927 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UoS Class Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f1ea; --panel:#fbf9f4; --text:#1f1d19; --muted:#6c675d; --border:#ddd7ca; --soft:#efebe2;
+  --accent:#1e5a4c; --accent-ink:#fff; --danger:#b3261e; --ok:#2e6b34; --warn:#8a5a00;
+  --shadow:none;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#161512; --panel:#1d1c18; --text:#e9e5dc; --muted:#a39d90; --border:#33302a; --soft:#25231f;
+    --accent:#6fb59f; --accent-ink:#10140f; --danger:#f2867c; --ok:#7cc488; --warn:#e0b25a;
+    --shadow:none; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#161512; --panel:#1d1c18; --text:#e9e5dc; --muted:#a39d90; --border:#33302a; --soft:#25231f;
+  --accent:#6fb59f; --accent-ink:#10140f; --danger:#f2867c; --ok:#7cc488; --warn:#e0b25a;
+  --shadow:none; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:14px/1.5 "IBM Plex Sans",system-ui,"Segoe UI",sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+button,.btn{cursor:pointer;border:1px solid var(--border);background:var(--panel);border-radius:4px;padding:6px 12px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+button:hover,.btn:hover{background:var(--soft)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.primary:hover{background:color-mix(in srgb,var(--accent) 85%,var(--text))}
+button.small{padding:3px 8px;font-size:12px;border-radius:3px}
+button.ghost{border-color:transparent;background:transparent}
+button.ghost:hover{background:var(--soft)}
+button:disabled{opacity:.5;cursor:default}
+input[type=text],input[type=search],select,textarea{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:6px 10px;width:100%}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+h1{font-size:17px;margin:0;font-weight:700;letter-spacing:-.01em}
+h2{font-size:14px;font-weight:600;color:var(--text);margin:0 0 10px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.muted{color:var(--muted)}
+.tiny{font-size:12px}
+code{font-family:var(--mono);font-size:12px;background:var(--soft);padding:1px 4px;border-radius:2px}
+
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20}
+.brand{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}
+.badge{font-size:12px;color:var(--muted);font-weight:400}
+.hdr-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+.layout{display:grid;gap:16px;padding:16px;grid-template-columns:300px minmax(0,1fr) 440px;grid-template-areas:"side center right";align-items:start}
+@media (max-width:1350px){.layout{grid-template-columns:290px minmax(0,1fr);grid-template-areas:"side center" "side right"}}
+@media (max-width:860px){.layout{grid-template-columns:minmax(0,1fr);grid-template-areas:"side" "center" "right"}}
+.side{grid-area:side;display:flex;flex-direction:column;gap:16px;min-width:0}
+.center{grid-area:center;min-width:0}
+.right{grid-area:right;min-width:0}
+@media (min-width:1351px){.right{position:sticky;top:76px;max-height:calc(100vh - 92px);overflow-y:auto;overscroll-behavior:contain}}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px}
+
+/* course search */
+.results{display:flex;flex-direction:column;gap:2px;margin:8px 0 0;max-height:280px;overflow:auto}
+.res{display:flex;gap:8px;align-items:center;padding:6px 8px;border-radius:3px}
+.res:hover{background:var(--soft)}
+.res .t{flex:1;min-width:0}
+.res .t b{font-variant-numeric:tabular-nums}
+.res .t div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mycourses{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.mc{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:8px;border:1px solid var(--border);border-radius:3px;border-left:4px solid var(--c)}
+.mc .t{min-width:0}
+.mc .t div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mc input{margin:0}
+.empty{color:var(--muted);font-size:13px;padding:8px 0}
+.proflist{margin-top:6px;max-height:190px;overflow:auto;border:1px solid var(--border);border-radius:4px;padding:4px}
+.proflist label{display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:3px;font-size:13px;cursor:pointer}
+.proflist label:hover{background:var(--soft)}
+.proflist .av{padding:0 6px;line-height:1.4}.proflist .av.on{background:var(--danger);border-color:var(--danger);color:#fff}.proflist label.avoid>span:not(.pc){text-decoration:line-through;opacity:.6}
+.proflist .pc{margin-left:auto;font-size:11px;color:var(--muted);white-space:nowrap}
+.crnTest{margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+
+/* filters */
+.fgroup{margin-bottom:12px}
+.fgroup>label,.flabel{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--border);background:var(--panel);border-radius:3px;padding:4px 9px;font-size:13px;cursor:pointer;user-select:none}
+.chip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.check{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px}
+
+/* tabs */
+.tabs{display:flex;gap:4px;margin-bottom:12px;border-bottom:1px solid var(--border)}
+.tabs button{border:none;border-bottom:2px solid transparent;border-radius:0;background:none;padding:8px 14px;color:var(--muted);font-weight:600}
+.tabs button.active{color:var(--text);border-bottom-color:var(--accent)}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+.toolbar select{width:auto}
+
+/* course blocks */
+.cblock{background:var(--panel);border:1px solid var(--border);border-radius:6px;margin-bottom:14px;overflow:hidden}
+.cbh{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;padding:10px 14px;border-left:4px solid var(--c)}
+.cbh b{font-variant-numeric:tabular-nums}
+.cbh .grow{flex:1}
+.prow{display:grid;grid-template-columns:84px minmax(110px,1fr) minmax(190px,2fr) 70px auto;gap:10px;align-items:center;padding:8px 14px;border-top:1px solid var(--border);cursor:default}
+.prow>*{min-width:0}
+.when>div+div{margin-top:3px}
+.when .loc{display:block;font-size:12px;color:var(--muted);padding-left:34px}
+.prow.head{font-size:12px;color:var(--muted);padding-top:6px;padding-bottom:6px;background:var(--soft)}
+.prow:not(.head):hover{background:var(--soft)}
+.prow.picked{background:color-mix(in srgb,var(--c) 14%,var(--panel))}
+.prow.filtered{opacity:.45}
+.prow.excluded .sec,.prow.excluded .who,.prow.excluded .when{text-decoration:line-through;opacity:.55}
+.sec b{font-variant-numeric:tabular-nums}
+.tag{min-width:30px;text-align:center}
+.tag{display:inline-block;font-size:11px;font-weight:500;padding:0 4px;border-radius:2px;background:var(--soft);color:var(--muted);margin-right:4px;vertical-align:1px}
+.seats{font-family:var(--mono);font-size:13px}
+.seats.full{color:var(--danger)}
+.acts{display:flex;gap:4px;justify-content:flex-end}
+.clash{color:var(--danger);font-size:12px}
+.morebar{padding:8px 14px;border-top:1px solid var(--border);font-size:13px}
+@media (max-width:700px){
+  .prow{grid-template-columns:1fr auto;grid-template-areas:"sec acts" "who who" "when when" "seats seats"}
+  .prow.head{display:none}
+  .prow .sec{grid-area:sec}.prow .who{grid-area:who}.prow .when{grid-area:when}.prow .seats{grid-area:seats}.prow .acts{grid-area:acts}
+  .when div{white-space:normal}
+}
+
+/* timetable */
+.tt{--hour:44px;font-size:11px;user-select:none}
+.when b,.sec b,.cbh b,.mc b,.res .t b,.pick b{font-family:var(--mono);font-weight:500}
+.tt-head{display:grid;grid-template-columns:38px repeat(var(--nd),1fr);text-align:center;font-weight:600;color:var(--muted);padding-bottom:4px}
+.tt-body{display:grid;grid-template-columns:38px repeat(var(--nd),1fr);position:relative}
+.tt-hours{position:relative}
+.tt-hours span{position:absolute;right:6px;transform:translateY(-50%);color:var(--muted);font-size:10px;font-family:var(--mono)}
+.tt-col{position:relative;border-left:1px solid var(--border)}
+.tt-line{position:absolute;left:0;right:0;border-top:1px dashed var(--border)}
+.blk{position:absolute;left:2px;right:2px;border-radius:2px;padding:2px 4px;overflow:hidden;background:color-mix(in srgb,var(--c) 22%,var(--panel));border-left:3px solid var(--c);line-height:1.2;color:var(--text)}
+.blk b{display:block;font-size:11px}
+.blk.ghost{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--c) 18%,transparent) 0 6px,transparent 6px 12px);border:2px dashed var(--c);z-index:3}
+.blk.conflict{outline:2px solid var(--danger);z-index:2}
+.tt.mini{--hour:13px}
+.tt.mini .tt-head{font-size:10px}
+.tt.mini .blk{border-radius:3px;padding:0}
+.tt-empty{padding:30px 0;text-align:center;color:var(--muted)}
+.picks{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.pick{display:grid;grid-template-columns:1fr auto;gap:4px 8px;padding:8px 10px;border-radius:3px;border:1px solid var(--border);border-left:4px solid var(--c);font-size:13px}
+.pick .crn{font-family:var(--mono);font-size:12px}
+.pick.none{opacity:.6;border-style:dashed;border-left-style:solid}
+.totals{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
+.warnbox{margin-top:10px;padding:8px 10px;border-radius:3px;background:color-mix(in srgb,var(--danger) 12%,var(--panel));color:var(--danger);font-size:13px}
+
+/* generator */
+.gen-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.gcard{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.gcard .stats{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px;color:var(--muted)}
+.gcard .stats b{color:var(--text)}
+.gcard .secs{font-size:12px;display:flex;flex-direction:column;gap:2px}
+.gcard .secs div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dot{display:inline-block;width:8px;height:8px;border-radius:1px;background:var(--c);margin-right:5px;vertical-align:1px}
+.notice{padding:14px;border-radius:6px;background:var(--panel);border:1px solid var(--border)}
+
+/* onboarding + dialogs */
+.welcome{max-width:720px}
+.welcome ol{padding-left:20px}
+.welcome li{margin-bottom:8px}
+dialog{border:1px solid var(--border);border-radius:6px;padding:0;background:var(--panel);color:var(--text);width:min(680px,calc(100vw - 32px));max-height:calc(100vh - 32px)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.dlg{padding:18px 20px;overflow:auto}
+.dlg h3{margin:0 0 6px;font-size:17px}
+.dlg h4{margin:18px 0 6px;font-size:14px}
+.dlg ol{padding-left:20px;margin:6px 0}
+.dlg li{margin-bottom:6px}
+.dlg-foot{display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:1px solid var(--border)}
+.bmk{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:4px;background:var(--accent);color:var(--accent-ink);text-decoration:none;font-weight:600;cursor:grab}
+textarea{min-height:160px;font-family:var(--mono);font-size:12px}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:9px 16px;border-radius:4px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:100;max-width:calc(100vw - 32px)}
+#toast.show{opacity:1}
+.dropping::after{content:"Drop the JSON file to import";position:fixed;inset:12px;border:2px dashed var(--accent);border-radius:6px;background:color-mix(in srgb,var(--accent) 10%,transparent);display:grid;place-items:center;font-size:20px;font-weight:600;color:var(--accent);z-index:200}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1>UoS Class Planner</h1>
+    <span id="termBadge" class="badge">No class data loaded</span>
+  </div>
+  <div class="hdr-actions">
+    <button id="btnGet" class="primary">Get class data</button>
+    <button id="btnPaste">Paste data</button>
+    <label class="btn">Import file<input type="file" id="fileIn" accept=".json,application/json" hidden></label>
+    <button id="btnClock" title="Switch between 12-hour and 24-hour times">12h</button>
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="side">
+    <section class="card">
+      <h2>My courses</h2>
+      <input id="courseSearch" type="search" placeholder="Search code, title or professor…" autocomplete="off">
+      <div class="tiny muted" style="margin-top:4px">Paste several codes at once (<code>1501211, 1440102</code>) and press Enter.</div>
+      <div id="searchResults" class="results"></div>
+      <div id="myCourses" class="mycourses"></div>
+    </section>
+    <section class="card">
+      <h2>Filters <button id="resetFilters" class="small ghost" style="margin-left:auto">Reset</button></h2>
+      <div class="fgroup">
+        <span class="flabel">Days I can attend</span>
+        <div id="dayChips" class="chips"></div>
+      </div>
+      <div class="fgroup row2">
+        <div><label for="fFrom">Start no earlier than</label><select id="fFrom"></select></div>
+        <div><label for="fTo">Finish by</label><select id="fTo"></select></div>
+      </div>
+      <details class="fgroup" id="perDay"><summary class="flabel" style="cursor:pointer">Different times per day</summary>
+        <div id="dayTimes" style="display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;align-items:center;margin-top:6px"></div>
+        <div class="tiny muted" style="margin-top:4px">Blank = use the times above.</div>
+      </details>
+      <div class="fgroup row2">
+        <div><label for="fBreakFrom">Keep free from</label><select id="fBreakFrom"></select></div>
+        <div><label for="fBreakTo">until</label><select id="fBreakTo"></select></div>
+      </div>
+      <div class="fgroup">
+        <span class="flabel">Sections for</span>
+        <div id="grpChips" class="chips"></div>
+        <div class="tiny muted" style="margin-top:4px">From the section number: 01&ndash;29 men, 31&ndash;59 women, 61+ mixed.</div>
+      </div>
+      <div class="fgroup">
+        <span class="flabel">Campus</span>
+        <div id="campusChips" class="chips"><span class="tiny muted">Load data first</span></div>
+      </div>
+      <div class="fgroup">
+        <span class="flabel" style="display:flex;justify-content:space-between;align-items:center">Preferred professors <button id="clearProfs" class="small ghost">Clear</button></span>
+        <input id="fInstr" type="search" placeholder="Search professors…" autocomplete="off">
+        <div id="profList" class="proflist"></div>
+        <div class="tiny muted" style="margin-top:4px">Ticking a professor limits only the courses they teach. ✕ hides a professor's sections.</div>
+      </div>
+      <label class="check"><input type="checkbox" id="fOpen"> Only sections with open seats</label>
+      <label class="check"><input type="checkbox" id="fNoTba"> Hide sections with no set time (TBA)</label>
+    </section>
+  </aside>
+
+  <section class="center">
+    <div class="tabs" role="tablist">
+      <button data-tab="browse" class="active" role="tab">Sections</button>
+      <button data-tab="gen" role="tab">Auto-plan</button>
+    </div>
+    <div id="tab-browse"></div>
+    <div id="tab-gen" hidden>
+      <div class="toolbar">
+        <label class="tiny muted" for="genSort">Best first by</label>
+        <select id="genSort">
+          <option value="days">Fewest days on campus</option>
+          <option value="gaps">Fewest gaps between classes</option>
+          <option value="late">Latest start</option>
+          <option value="early">Earliest finish</option>
+          <option value="seats">Most open seats</option>
+        </select>
+        <select id="maxDays" aria-label="Days per week">
+          <option value="0">Any number of days</option>
+          <option value="2">At most 2 days</option>
+          <option value="3">At most 3 days</option>
+          <option value="4">At most 4 days</option>
+          <option value="5">At most 5 days</option>
+        </select>
+        <label class="check"><input type="checkbox" id="keepPicks"> Keep my current picks fixed</label>
+      </div>
+      <div id="genOut"></div>
+    </div>
+  </section>
+
+  <aside class="right">
+    <section class="card">
+      <h2>My timetable <span id="credits" class="badge" style="margin-left:auto"></span></h2>
+      <div id="tt" class="tt"></div>
+      <div id="clashBox"></div>
+      <div id="picks" class="picks"></div>
+      <div class="totals">
+        <span id="crnLine" class="tiny muted"></span>
+        <div style="display:flex;gap:6px">
+          <button id="clearPicks" class="small">Clear</button>
+          <button id="copyCrns" class="small primary">Copy CRNs</button>
+        </div>
+      </div>
+      <div class="crnTest">
+        <label class="flabel" for="crnIn">Test CRNs: paste a list to load it into the timetable</label>
+        <div style="display:flex;gap:6px"><input id="crnIn" type="text" placeholder="11960 11961 12072 12073"><button id="crnLoad" class="small">Load</button></div>
+      </div>
+    </section>
+  </aside>
+</main>
+
+<dialog id="getDlg">
+  <div class="dlg">
+    <h3>Get class data from UoS</h3>
+    <p class="muted" style="margin-top:0">The UoS registration site doesn't let other pages read it, so a small bookmark runs <em>on</em> the UoS Class Search page, grabs the sections you ask for, and gives them back to you as a file and on your clipboard. No login needed. It only reads public class search data.</p>
+
+    <h4>Python script (easiest)</h4>
+    <p style="margin:0">Put <code>uos_classes.py</code> next to this file and run <code>python uos_classes.py --term 202620</code>. It grabs every class for the term and opens a copy of this planner with the data already inside. Add <code>--wait 15</code> to keep checking every 15 minutes until the classes are published.</p>
+
+    <h4>Bookmark (set up once)</h4>
+    <ol>
+      <li>Show your bookmarks bar (<code>Ctrl</code>+<code>Shift</code>+<code>B</code>).</li>
+      <li>Drag this button onto it: <a id="bmkLink" class="bmk" href="#">Grab UoS classes</a></li>
+      <li>Open the <a href="https://reg-prod.ec.sharjah.ac.ae/StudentRegistrationSsb/ssb/classSearch/classSearch" target="_blank" rel="noopener">UoS Class Search page</a> and click the bookmark.</li>
+      <li>Pick the term (Spring 2026/2027 is <code>202620</code>) and type your course codes, or <code>ALL</code> for every subject (takes a minute or two).</li>
+      <li>Come back here and click <b>Paste data</b>, or <b>Import file</b> and choose the downloaded <code>uos-classes-…json</code>.</li>
+    </ol>
+
+    <h4>Console script</h4>
+    <div class="row2" style="margin-bottom:8px">
+      <div><label class="flabel" for="cTerm">Term code</label><input id="cTerm" type="text" value="202620"></div>
+      <div><label class="flabel" for="cCourses">Courses (or ALL)</label><input id="cCourses" type="text" placeholder="1501211, 1440102, 0202"></div>
+    </div>
+    <ol>
+      <li>Open the <a href="https://reg-prod.ec.sharjah.ac.ae/StudentRegistrationSsb/ssb/classSearch/classSearch" target="_blank" rel="noopener">UoS Class Search page</a>, press <code>F12</code> and open the <b>Console</b> tab.</li>
+      <li><button id="copyScript" class="small primary">Copy script</button>, paste it into the console and press Enter. (Chrome may ask you to type <code>allow pasting</code> first.)</li>
+      <li>Come back and click <b>Paste data</b>.</li>
+    </ol>
+    <p class="tiny muted">If a term has no classes published yet, the grabber says so. You can try everything with Fall 2026/2027 (<code>202610</code>) in the meantime.</p>
+  </div>
+  <div class="dlg-foot"><button data-close>Done</button></div>
+</dialog>
+
+<dialog id="pasteDlg">
+  <div class="dlg">
+    <h3>Paste class data</h3>
+    <p class="muted" style="margin-top:0">Paste the data the grabber copied (<code>Ctrl</code>+<code>V</code>).</p>
+    <textarea id="pasteArea" placeholder='{"v":1,"term":"202620",…}'></textarea>
+  </div>
+  <div class="dlg-foot"><button data-close>Cancel</button><button id="pasteLoad" class="primary">Load</button></div>
+</dialog>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<script>window.UOS_DATA=null;/*UOS_DATA*/</script>
+
+<script>
+/* ---------- shared with the grabber (runs on the UoS page too) ---------- */
+function mapSection(x){
+  var dec=function(s){return s==null?'':String(s).replace(/&#(\d+);/g,function(m,n){return String.fromCharCode(+n)}).replace(/&quot;/g,'"').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')};
+  var K=['sunday','monday','tuesday','wednesday','thursday','friday','saturday'],L='UMTWRFS';
+  return {
+    crn:x.courseReferenceNumber, subj:x.subject, subjDesc:dec(x.subjectDescription), num:x.courseNumber,
+    title:dec(x.courseTitle), seq:x.sequenceNumber, type:dec(x.scheduleTypeDescription),
+    cr:x.creditHours!=null?x.creditHours:(x.creditHourLow||0), campus:dec(x.campusDescription),
+    max:x.maximumEnrollment, seats:x.seatsAvailable,
+    linked:!!x.isSectionLinked,
+    instr:(x.faculty||[]).map(function(f){return dec(f.displayName)}),
+    meets:(x.meetingsFaculty||[]).map(function(m){return m.meetingTime}).filter(Boolean).map(function(t){return {
+      d:K.map(function(k,i){return t[k]?L[i]:''}).join(''), b:t.beginTime||'', e:t.endTime||'',
+      bldg:dec(t.building), room:dec(t.room), campus:dec(t.campusDescription)
+    }})
+  };
+}
+
+async function uosGrab(CFG, mapSection){
+  var B='/StudentRegistrationSsb/ssb/';
+  if(!/sharjah\.ac\.ae$/.test(location.hostname)||location.pathname.indexOf('/StudentRegistrationSsb/')<0){
+    if(confirm('This runs on the UoS Class Search page. Open it now? (Then click the bookmark again.)')) location.href='https://reg-prod.ec.sharjah.ac.ae'+B+'classSearch/classSearch';
+    return;
+  }
+  var old=document.getElementById('uos-grab'); if(old) old.remove();
+  var ui=document.createElement('div'); ui.id='uos-grab';
+  ui.style.cssText='position:fixed;z-index:2147483647;top:16px;right:16px;width:380px;max-width:calc(100vw - 32px);background:#fff;color:#111;border:1px solid #d0d5dd;border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.25);padding:16px;font:14px/1.5 system-ui,sans-serif';
+  document.body.appendChild(ui);
+  var btn='style="font:inherit;padding:6px 12px;border-radius:8px;border:1px solid #d0d5dd;background:#fff;cursor:pointer"';
+  var say=function(h){ui.innerHTML='<div style="font-weight:700;font-size:15px;margin-bottom:6px">UoS Planner · class grabber</div>'+h;};
+  var getJ=async function(u,o){var r=await fetch(B+u,o);if(!r.ok)throw new Error('The UoS site answered '+r.status+'. Reload the Class Search page and try again.');var t=await r.text();try{return JSON.parse(t)}catch(e){throw new Error('The UoS site sent an unexpected page (session expired?). Reload the Class Search page and try again.')}};
+  var close=function(){var b=ui.querySelector('#uosX');if(b)b.onclick=function(){ui.remove()}};
+  try{
+    say('Loading terms…');
+    var terms=await getJ('classSearch/getTerms?searchTerm=&offset=1&max=30');
+    var term=CFG.term;
+    if(!term){
+      var def=(terms.find(function(t){return /spring/i.test(t.description)})||terms[0]||{}).code||'';
+      term=prompt('Which term? Type its code:\n\n'+terms.slice(0,8).map(function(t){return t.code+'    '+t.description.replace(/\s*\(View Only\)/i,'')}).join('\n'),def);
+      if(!term){ui.remove();return;}
+    }
+    term=String(term).trim();
+    var termDesc=((terms.find(function(t){return t.code===term})||{}).description||term).replace(/\s*\(View Only\)/i,'');
+    var want=CFG.courses;
+    if(want==null||want===''){
+      want=prompt('Which courses? Separate codes with commas, e.g.\n\n1501211, 1440102, 0202\n\nA 4-digit subject code grabs the whole subject.\nType ALL to grab every subject (slower).','');
+      if(want==null||!want.trim()){ui.remove();return;}
+    }
+    say('Checking what is published for <b>'+termDesc+'</b>…');
+    var subs=await getJ('classSearch/get_subject?searchTerm=&term='+encodeURIComponent(term)+'&offset=1&max=2000');
+    if(!subs.length) throw new Error('No classes are published for '+termDesc+' yet. Try again once the schedule is out.');
+    var qs=[];
+    if(/^\s*all\s*$/i.test(want)) qs=Array.from(new Set(subs.map(function(s){return s.code}))).map(function(s){return {s:s,n:''}});
+    else want.split(/[,;\n]+/).forEach(function(t){var d=t.replace(/\D/g,'');if(d.length>=4)qs.push({s:d.slice(0,4),n:d.slice(4)})});
+    if(!qs.length) throw new Error('No course codes recognised. Use codes like 1501211 or 1501 211.');
+    var map=new Map(),miss=[];
+    for(var i=0;i<qs.length;i++){
+      var q=qs[i];
+      say('Searching <b>'+q.s+(q.n?' '+q.n:'')+'</b> ('+(i+1)+' of '+qs.length+')<br><span style="color:#667085">'+map.size+' sections so far</span>');
+      await fetch(B+'classSearch/resetDataForm',{method:'POST'});
+      await fetch(B+'term/search?mode=search',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'term='+encodeURIComponent(term)});
+      var off=0,total=0;
+      do{
+        var j=await getJ('searchResults/searchResults?txt_subject='+q.s+(q.n?'&txt_courseNumber='+q.n:'')+'&txt_term='+encodeURIComponent(term)+'&pageOffset='+off+'&pageMaxSize=500&sortColumn=subjectDescription&sortDirection=asc');
+        total=j.totalCount||0;(j.data||[]).forEach(function(x){map.set(x.courseReferenceNumber,x)});off+=500;
+      }while(off<total);
+      if(!total)miss.push(q.s+(q.n?' '+q.n:''));
+    }
+    var byCourse={};map.forEach(function(x){(byCourse[x.subjectCourse]=byCourse[x.subjectCourse]||[]).push(x)});
+    var need=[];
+    Object.keys(byCourse).forEach(function(k){
+      var L=byCourse[k].filter(function(x){return x.isSectionLinked});if(!L.length)return;
+      var p=L.filter(function(x){return /lecture/i.test(x.scheduleTypeDescription)||x.creditHours>0});
+      need.push.apply(need,p.length?p:L);
+    });
+    var links={},done=0,idx=0;
+    var worker=async function(){while(idx<need.length){var x=need[idx++];try{
+      var r=await getJ('searchResults/fetchLinkedSections?term='+encodeURIComponent(term)+'&courseReferenceNumber='+x.courseReferenceNumber);
+      links[x.courseReferenceNumber]=(r.linkedData||[]).map(function(opt){return opt.map(function(y){if(!map.has(y.courseReferenceNumber))map.set(y.courseReferenceNumber,y);return y.courseReferenceNumber})});
+    }catch(e){}done++;say('Matching lectures with their labs… '+done+' of '+need.length);}};
+    await Promise.all([1,2,3,4,5,6].map(worker));
+    var sections=Array.from(map.values()).map(function(x){var s=mapSection(x);if(links[s.crn])s.link=links[s.crn];return s});
+    if(!sections.length) throw new Error('No sections found for "'+want+'" in '+termDesc+'. Check the codes on the Class Search page.');
+    var txt=JSON.stringify({v:1,term:term,termDesc:termDesc,fetchedAt:new Date().toISOString(),query:want,sections:sections});
+    var fname='uos-classes-'+term+'.json';
+    var dl=function(){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'application/json'}));a.download=fname;document.body.appendChild(a);a.click();a.remove();};
+    dl();
+    var copied=false;try{await navigator.clipboard.writeText(txt);copied=true}catch(e){}
+    say('Got <b>'+sections.length+'</b> sections for <b>'+termDesc+'</b>.<br>'+(copied?'Copied to your clipboard and saved':'Saved')+' as <code>'+fname+'</code> in your Downloads.'+(miss.length?'<br><span style="color:#b54708">Nothing offered for: '+miss.join(', ')+'</span>':'')+'<br><br>Back in the planner, click <b>Paste data</b> or <b>Import file</b>.'+
+      '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button id="uosC" '+btn+'>Copy data</button><button id="uosD" '+btn+'>Download again</button><button id="uosX" '+btn+'>Close</button></div>');
+    ui.querySelector('#uosC').onclick=async function(e){try{await navigator.clipboard.writeText(txt);e.target.textContent='Copied ✓'}catch(err){e.target.textContent='Copy failed, use the file'}};
+    ui.querySelector('#uosD').onclick=dl;close();
+  }catch(err){
+    say('<div style="color:#b42318">'+String(err&&err.message||err)+'</div><div style="margin-top:12px"><button id="uosX" '+btn+'>Close</button></div>');close();
+  }
+}
+
+/* ---------- planner ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const DAYS=[['U','Sun'],['M','Mon'],['T','Tue'],['W','Wed'],['R','Thu'],['F','Fri'],['S','Sat']];
+const DAYNAME=Object.fromEntries(DAYS);
+const COLS=['#2f6f8f','#c0612b','#3d7a4a','#8a4f9e','#b23a48','#a7832a','#2a8a86','#5a6fb0','#7a5c3e','#6f7f2f','#c2477d','#4b5563'];
+const LS='uosPlanner.v1';
+const DEF_FILTERS={days:'UMTWRFS',from:'',to:'',noCampus:[],noGrp:[],profs:[],open:false,dayTimes:{},noProfs:[],breakFrom:'',breakTo:'',noTba:false};
+
+let DATA=null, COURSES=new Map(), PKG=new Map(), SEC=new Map(), CAMPUSES=[], DAYS_IN_DATA='MTWRF';
+let S={courses:[],picks:{},excluded:{},include:{},filters:{...DEF_FILTERS},h12:true,genSort:'days',maxDays:0,keepPicks:false,tab:'browse',showFiltered:false,sort:'section'};
+let preview=null, genLimit=24;
+
+function load(){
+  try{const s=JSON.parse(localStorage.getItem(LS)||'null');if(s)S={...S,...s,filters:{...DEF_FILTERS,...s.filters}};}catch(e){}
+  if(window.UOS_DATA){setData(window.UOS_DATA,false);return;}
+  try{const d=localStorage.getItem(LS+'.data');if(d)setData(JSON.parse(d),false);}catch(e){}
+}
+function save(){try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('show'),2600);}
+
+/* data */
+function normalize(j){
+  if(typeof j==='string')j=JSON.parse(j.replace(/^﻿/,''));
+  if(j&&j.v===1&&Array.isArray(j.sections))return j;
+  const arr=Array.isArray(j)?j:(j&&(j.data||j.sections));
+  if(!Array.isArray(arr))throw new Error('This doesn\'t look like UoS class data.');
+  if(!arr.length)throw new Error('The data has no sections in it.');
+  if(arr[0].courseReferenceNumber)return {v:1,term:arr[0].term,termDesc:mapSection({courseTitle:arr[0].termDesc}).title,fetchedAt:null,sections:arr.map(mapSection)};
+  throw new Error('This doesn\'t look like UoS class data.');
+}
+function setData(d,persist=true){
+  DATA=d;
+  if(persist){try{localStorage.setItem(LS+'.data',JSON.stringify(d))}catch(e){toast('Loaded, but too big for the browser to remember. Re-import next time.')}}
+  buildIndex();
+  S.courses=S.courses.filter(k=>COURSES.has(k));
+  for(const k in S.picks)if(!PKG.has(S.picks[k])||!S.courses.includes(k))delete S.picks[k];
+  save();
+}
+const toMin=t=>t&&t.length>=3?(+t.slice(0,-2))*60+(+t.slice(-2)):null;
+function buildIndex(){
+  COURSES=new Map();PKG=new Map();SEC=new Map();
+  const camp=new Set(),days=new Set('MTWRF');
+  DATA.sections.forEach(s=>{
+    SEC.set(s.crn,s);s.key=s.subj+s.num;
+    let c=COURSES.get(s.key);
+    if(!c){c={key:s.key,subj:s.subj,num:s.num,title:s.title,subjDesc:s.subjDesc,secs:[]};COURSES.set(s.key,c);}
+    c.secs.push(s);
+    s.meets.forEach(m=>{const cp=m.campus||s.campus;if(cp)camp.add(cp);[...m.d].forEach(x=>days.add(x));});
+    if(!s.meets.length&&s.campus)camp.add(s.campus);
+  });
+  COURSES.forEach(c=>{
+    c.pkgs=buildPkgs(c);
+    c.cr=c.pkgs.length?Math.max(...c.pkgs.map(p=>p.cr)):0;
+    c.instr=[...new Set(c.secs.flatMap(s=>s.instr))];
+    c.pkgs.forEach(p=>PKG.set(p.id,p));
+  });
+  CAMPUSES=[...camp].sort();
+  DAYS_IN_DATA=DAYS.map(d=>d[0]).filter(d=>days.has(d)).join('');
+}
+function buildPkgs(c){
+  const secs=c.secs.filter(s=>!/office hours/i.test(s.type));
+  const linked=secs.filter(s=>s.linked);
+  // Banner doesn't always link lecture+lab: if nothing is linked but there are several section types, take one of each.
+  const types=[...new Set(secs.map(s=>s.type))];
+  if(!linked.length&&types.length>1)
+    return types.map(t=>secs.filter(s=>s.type===t)).reduce((acc,g)=>acc.flatMap(a=>g.map(s=>[...a,s])),[[]]).map(o=>mkPkg(c,o));
+  const isPrim=s=>/lecture/i.test(s.type)||s.cr>0;
+  let prim=linked.filter(s=>s.link&&s.link.length);
+  if(prim.some(isPrim))prim=prim.filter(isPrim);
+  if(!prim.length)prim=linked.filter(isPrim);
+  const base=s=>String(s.seq).replace(/[^0-9]+$/,'');
+  const pkgs=[],used=new Set();
+  prim.forEach(p=>{
+    used.add(p.crn);
+    let opts=(p.link||[]).map(o=>o.map(cr=>SEC.get(cr)).filter(Boolean)).filter(o=>o.length);
+    if(!opts.length&&!p.link)opts=linked.filter(s=>!prim.includes(s)&&base(s)===base(p)).map(s=>[s]);
+    if(!opts.length)pkgs.push(mkPkg(c,[p]));
+    opts.forEach(o=>{o.forEach(s=>used.add(s.crn));pkgs.push(mkPkg(c,[p,...o]));});
+  });
+  secs.forEach(s=>{if(!used.has(s.crn)&&!(s.linked&&prim.length))pkgs.push(mkPkg(c,[s]));});
+  return pkgs;
+}
+function mkPkg(c,secs){
+  const meets=secs.flatMap(s=>s.meets.map(m=>({...m,sec:s,b:toMin(m.b),e:toMin(m.e),cp:m.campus||s.campus})));
+  return {id:secs.map(s=>s.crn).join('+'),course:c.key,secs,label:secs.map(s=>s.seq).join(' + '),
+    cr:Math.max(...secs.map(s=>+s.cr||0)),instr:[...new Set(secs.flatMap(s=>s.instr))],meets,
+    seats:Math.min(...secs.map(s=>s.seats??0)),start:Math.min(...meets.filter(m=>m.b!=null).map(m=>m.b),9999)};
+}
+
+/* helpers */
+const cc=k=>{const i=S.courses.indexOf(k);return COLS[(i<0?0:i)%COLS.length];};
+const code=c=>c.subj+' '+c.num;
+const GRPS=['Men','Women','Mixed'];
+const grp=s=>{const n=parseInt(s.seq,10);return isNaN(n)?'':n<30?'Men':n<60?'Women':'Mixed';};
+const pretty=n=>{const i=n.indexOf(', ');return i>0?n.slice(i+2)+' '+n.slice(0,i):n;};
+const shortCampus=c=>(c||'').replace(/^UOS\s+/i,'').replace(/\s+Campus$/i,'').replace(/'s$/,"'s");
+function fmt(m){if(m==null)return'';const h=Math.floor(m/60),mm=String(m%60).padStart(2,'0');if(!S.h12)return String(h).padStart(2,'0')+':'+mm;return ((h+11)%12+1)+':'+mm;}
+function ampm(m){return S.h12?(m<720?' am':' pm'):'';}
+function range(b,e){if(b==null)return 'Time TBA';if(!S.h12)return fmt(b)+'–'+fmt(e);const same=(b<720)===(e<720);return fmt(b)+(same?'':ampm(b))+'–'+fmt(e)+ampm(e);}
+const dayStr=d=>[...d].map(x=>DAYNAME[x]).join(' ');
+function overlaps(a,b){
+  for(const m of a.meets){if(m.b==null)continue;
+    for(const n of b.meets){if(n.b==null)continue;
+      if(m.b<n.e&&n.b<m.e&&[...m.d].some(d=>n.d.includes(d)))return true;}}
+  return false;
+}
+function passes(p,f=S.filters){
+  if(p.secs.some(s=>f.noGrp.includes(grp(s))))return false;
+  if(!p.meets.length&&f.noCampus.includes(p.secs[0].campus))return false;
+  for(const m of p.meets){
+    if([...m.d].some(d=>!f.days.includes(d)))return false;
+    if(m.b!=null){for(const d of m.d){const t=f.dayTimes[d]||{},fr=t.from||f.from,to=t.to||f.to;
+        if(fr!==''&&m.b<+fr)return false;if(to!==''&&m.e>+to)return false;}
+      if(f.breakFrom!==''&&f.breakTo!==''&&m.b<+f.breakTo&&+f.breakFrom<m.e)return false;}
+    else if(f.noTba)return false;
+    if(f.noCampus.includes(m.cp))return false;
+  }
+  if(f.open&&p.seats<=0)return false;
+  if(f.noTba&&!p.meets.length)return false;
+  if(f.noProfs.length&&p.instr.some(n=>f.noProfs.includes(n)))return false;
+  if(f.profs.length){
+    const mine=f.profs.filter(n=>COURSES.get(p.course).instr.includes(n));
+    if(mine.length&&!p.instr.some(n=>mine.includes(n)))return false;
+  }
+  return true;
+}
+
+/* rendering: header + filters */
+function renderHeader(){
+  const b=$('#termBadge');
+  if(!DATA){b.textContent='No class data loaded';return;}
+  const when=DATA.fetchedAt?' · grabbed '+new Date(DATA.fetchedAt).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
+  b.textContent=(DATA.termDesc||DATA.term)+' · '+DATA.sections.length+' sections'+when;
+  $('#btnClock').textContent=S.h12?'12h':'24h';
+}
+function timeOpts(sel,val,label){
+  let h=`<option value="">${label}</option>`;
+  for(let m=7*60;m<=22*60;m+=30)h+=`<option value="${m}"${String(val)===String(m)?' selected':''}>${fmt(m)}${ampm(m)}</option>`;
+  sel.innerHTML=h;
+}
+function renderFilters(){
+  const f=S.filters;
+  const showDays=DAYS.filter(d=>DAYS_IN_DATA.includes(d[0])||!'MTWRF'.includes(d[0])&&false);
+  $('#dayChips').innerHTML=DAYS.filter(d=>DAYS_IN_DATA.includes(d[0])).map(([k,n])=>`<span class="chip${f.days.includes(k)?' on':''}" data-day="${k}" role="checkbox" aria-checked="${f.days.includes(k)}" tabindex="0">${n}</span>`).join('');
+  timeOpts($('#fFrom'),f.from,'Any time');
+  $('#dayTimes').innerHTML=DAYS.filter(d=>DAYS_IN_DATA.includes(d[0])).map(([k,n])=>`<span class="tiny">${n}</span><select data-dt="${k}" data-k="from" aria-label="${n} start no earlier than"></select><select data-dt="${k}" data-k="to" aria-label="${n} finish by"></select>`).join('');
+  $('#dayTimes').querySelectorAll('select').forEach(el=>timeOpts(el,(f.dayTimes[el.dataset.dt]||{})[el.dataset.k]||'','Same'));
+  if(Object.values(f.dayTimes).some(t=>t.from||t.to))$('#perDay').open=true;timeOpts($('#fTo'),f.to,'Any time');timeOpts($('#fBreakFrom'),f.breakFrom,'No break');timeOpts($('#fBreakTo'),f.breakTo,'No break');
+  $('#grpChips').innerHTML=GRPS.map(g=>`<span class="chip${f.noGrp.includes(g)?'':' on'}" data-grp="${g}" role="checkbox" aria-checked="${!f.noGrp.includes(g)}" tabindex="0">${g}</span>`).join('');
+  $('#campusChips').innerHTML=CAMPUSES.length?CAMPUSES.map(c=>`<span class="chip${f.noCampus.includes(c)?'':' on'}" data-campus="${esc(c)}" role="checkbox" aria-checked="${!f.noCampus.includes(c)}" tabindex="0">${esc(shortCampus(c))}</span>`).join(''):'<span class="tiny muted">Load data first</span>';
+  $('#fOpen').checked=f.open;$('#fNoTba').checked=f.noTba;
+  renderProfList();
+}
+function renderProfList(){
+  const f=S.filters,q=$('#fInstr').value.trim().toLowerCase(),by=new Map();
+  S.courses.forEach(k=>{const c=COURSES.get(k);c.instr.forEach(n=>{if(!by.has(n))by.set(n,[]);by.get(n).push(code(c));});});
+  [...f.profs,...f.noProfs].forEach(n=>{if(!by.has(n))by.set(n,[]);});
+  const list=[...by.keys()].filter(n=>!q||pretty(n).toLowerCase().includes(q)||n.toLowerCase().includes(q))
+    .sort((a,b)=>(f.profs.includes(b)-f.profs.includes(a))||pretty(a).localeCompare(pretty(b)));
+  $('#profList').innerHTML=list.length?list.map(n=>{const av=f.noProfs.includes(n);return `<label${av?' class="avoid"':''}><input type="checkbox" data-prof="${esc(n)}"${f.profs.includes(n)?' checked':''}><span>${esc(pretty(n))}</span><span class="pc">${esc(by.get(n).join(', '))}</span><button class="small ghost av${av?' on':''}" data-avoid="${esc(n)}" title="${av?'Stop avoiding':'Avoid'} this professor" aria-label="${av?'Stop avoiding':'Avoid'} ${esc(pretty(n))}" aria-pressed="${av}">✕</button></label>`}).join('')
+    :`<div class="empty" style="padding:6px">${S.courses.length?'No matching professors':'Add courses to see their professors'}</div>`;
+  $('#clearProfs').hidden=!f.profs.length&&!f.noProfs.length;
+}
+
+/* my courses + search */
+function renderSearch(){
+  const q=$('#courseSearch').value.trim().toLowerCase(),out=$('#searchResults');
+  if(!q||!DATA){out.innerHTML=q&&!DATA?'<div class="empty">Load class data first (Get class data).</div>':'';return;}
+  const qd=q.replace(/[\s-]/g,'');
+  const hits=[];
+  for(const c of COURSES.values()){
+    const k=c.key,t=c.title.toLowerCase();
+    let score=0;
+    if(/^\d+$/.test(qd)&&k.startsWith(qd))score=3;
+    else if(t.includes(q))score=2;
+    else if(c.subjDesc.toLowerCase().includes(q))score=1.5;
+    else if(c.instr.some(n=>n.toLowerCase().includes(q)||pretty(n).toLowerCase().includes(q)))score=1;
+    if(score)hits.push([score,c]);
+  }
+  hits.sort((a,b)=>b[0]-a[0]||a[1].key.localeCompare(b[1].key));
+  out.innerHTML=hits.length?hits.slice(0,40).map(([,c])=>{const on=S.courses.includes(c.key);return `<div class="res"><div class="t"><div><b>${code(c)}</b> ${esc(c.title)}</div><div class="tiny muted">${c.cr} cr · ${c.pkgs.length} option${c.pkgs.length==1?'':'s'}</div></div><button class="small${on?'':' primary'}" data-add="${c.key}"${on?' disabled':''}>${on?'Added':'Add'}</button></div>`}).join('')+(hits.length>40?`<div class="empty">${hits.length-40} more, keep typing…</div>`:''):'<div class="empty">No matching courses in the loaded data.</div>';
+}
+function renderMyCourses(){
+  const el=$('#myCourses');
+  if(!S.courses.length){el.innerHTML=`<div class="empty">${DATA?'Search above and add the courses you plan to take.':'Load class data, then add your courses here.'}</div>`;return;}
+  el.innerHTML=S.courses.map(k=>{const c=COURSES.get(k);const n=c.pkgs.filter(p=>passes(p)&&!S.excluded[p.id]).length;
+    return `<div class="mc" style="--c:${cc(k)}"><input type="checkbox" title="Include in Auto-plan" data-inc="${k}"${S.include[k]===false?'':' checked'}><div class="t"><div><b>${code(c)}</b> ${esc(c.title)}</div><div class="tiny ${n?'muted':''}" style="${n?'':'color:var(--danger)'}">${c.cr} cr · ${n} of ${c.pkgs.length} options fit your filters${S.picks[k]?' · picked':''}</div></div><button class="small ghost" title="Remove course" data-rm="${k}" aria-label="Remove ${code(c)}">✕</button></div>`;}).join('');
+}
+
+/* browse tab */
+function meetLines(p){
+  const lines=[];
+  p.secs.forEach(s=>{
+    const ms=p.meets.filter(m=>m.sec===s);
+    const t=/lab/i.test(s.type)?'Lab':/tutorial/i.test(s.type)?'Tut':/lecture/i.test(s.type)?'Lec':s.type.split(' ')[0];
+    if(!ms.length){lines.push(`<div><span class="tag">${esc(t)}</span><span class="muted">No set time</span></div>`);return;}
+    ms.forEach(m=>lines.push(`<div><span class="tag">${esc(t)}</span><b>${m.d?dayStr(m.d):'TBA'}</b> ${range(m.b,m.e)}<span class="loc">${esc(shortCampus(m.cp))}${m.bldg?' · '+esc(m.bldg)+(m.room?'-'+esc(m.room):''):''}</span></div>`));
+  });
+  return lines.join('');
+}
+function sortPkgs(list){
+  const by={
+    section:(a,b)=>a.label.localeCompare(b.label,undefined,{numeric:true}),
+    time:(a,b)=>a.start-b.start||a.label.localeCompare(b.label,undefined,{numeric:true}),
+    prof:(a,b)=>(pretty(a.instr[0]||'~')).localeCompare(pretty(b.instr[0]||'~'))||a.start-b.start,
+    seats:(a,b)=>b.seats-a.seats
+  }[S.sort];
+  return list.slice().sort(by);
+}
+function renderBrowse(){
+  const el=$('#tab-browse');
+  if(!DATA){el.innerHTML=welcome();return;}
+  if(!S.courses.length){el.innerHTML=`<div class="notice"><b>Add your courses</b> using the search on the left (code like <code>1501211</code>, a title, or a professor's name). Every section of each course shows up here with its times and professor.</div>`;return;}
+  let h=`<div class="toolbar"><label class="tiny muted" for="sortSel">Sort sections by</label><select id="sortSel">
+    <option value="section"${S.sort=='section'?' selected':''}>Section number</option><option value="time"${S.sort=='time'?' selected':''}>Start time</option><option value="prof"${S.sort=='prof'?' selected':''}>Professor</option><option value="seats"${S.sort=='seats'?' selected':''}>Open seats</option></select>
+    <label class="check"><input type="checkbox" id="showFiltered"${S.showFiltered?' checked':''}> Show sections hidden by filters</label></div>`;
+  S.courses.forEach(k=>{
+    const c=COURSES.get(k),pick=S.picks[k];
+    const rows=sortPkgs(c.pkgs);const vis=rows.filter(p=>passes(p));
+    const hidden=rows.length-vis.length;
+    const profs=[...new Set(vis.flatMap(p=>p.instr))].length;
+    h+=`<div class="cblock" style="--c:${cc(k)}"><div class="cbh"><b>${code(c)}</b><span>${esc(c.title)}</span><span class="grow"></span><span class="tiny muted">${c.cr} cr · ${vis.length} option${vis.length==1?'':'s'} · ${profs} professor${profs==1?'':'s'}${hidden?` · ${hidden} hidden by filters`:''}</span></div>`;
+    h+=`<div class="prow head"><span>Section</span><span>Professor</span><span>Days &amp; time</span><span>Seats</span><span></span></div>`;
+    const show=S.showFiltered?rows:vis;
+    if(!show.length)h+=`<div class="morebar muted">No sections fit your filters.${hidden?' Loosen the filters or tick “Show sections hidden by filters”.':''}</div>`;
+    show.forEach(p=>{
+      const ok=passes(p),ex=!!S.excluded[p.id],picked=pick===p.id;
+      const clashes=S.courses.filter(o=>o!==k&&S.picks[o]&&overlaps(p,PKG.get(S.picks[o]))).map(o=>code(COURSES.get(o)));
+      const seatTxt=p.secs.map(s=>`<div>${s.seats??'?'} / ${s.max??'?'}</div>`).join('');
+      h+=`<div class="prow${picked?' picked':''}${ok?'':' filtered'}${ex?' excluded':''}" data-pkg="${p.id}">
+        <div class="sec"><b>${esc(p.label)}</b> <span class="tag">${[...new Set(p.secs.map(grp))].join('/')}</span>${(m=>m?'<span class="tag">'+(m[1]=='E'?'English':'Arabic')+'</span>':'')(/^\d+([AE])$/.exec(p.secs[0].seq))}<div class="tiny muted">${p.secs.map(s=>s.crn).join(', ')}</div></div>
+        <div class="who">${p.instr.length?p.instr.map(n=>esc(pretty(n))).join('<br>'):'<span class="muted">TBA</span>'}</div>
+        <div class="when">${meetLines(p)}${clashes.length?`<div class="clash">Clashes with ${clashes.join(', ')}</div>`:''}</div>
+        <div class="seats tiny${p.seats<=0?' full':''}" title="Open seats / capacity">${seatTxt}</div>
+        <div class="acts"><button class="small ghost" data-ex="${p.id}" title="${ex?'Allow in Auto-plan again':'Never use this section in Auto-plan'}">${ex?'Allow':'Skip'}</button><button class="small${picked?'':' primary'}" data-pick="${p.id}">${picked?'Remove':'Add'}</button></div>
+      </div>`;
+    });
+    h+='</div>';
+  });
+  el.innerHTML=h;
+}
+function welcome(){
+  return `<div class="notice welcome"><h2 style="font-size:16px">Getting started</h2><ol>
+  <li><b>Get class data.</b> Click <b>Get class data</b> above for a one-time bookmark that grabs sections straight from the UoS Class Search page.</li>
+  <li><b>Add your courses</b> on the left, then narrow things down with the day, time, campus and professor filters.</li>
+  <li><b>Pick sections</b> yourself, or let <b>Auto-plan</b> list every clash-free timetable. Then copy the CRNs for registration.</li></ol>
+  <button class="primary" onclick="openGet()">Get class data</button></div>`;
+}
+
+/* timetable */
+function drawGrid(el,items,{mini=false,ghost=null}={}){
+  let all=items.slice();if(ghost)all.push({p:ghost,ghost:true});
+  const timed=all.flatMap(i=>i.p.meets.filter(m=>m.b!=null));
+  let days=new Set('MTWRF');timed.forEach(m=>[...m.d].forEach(d=>days.add(d)));
+  const dl=DAYS.map(d=>d[0]).filter(d=>days.has(d));
+  let lo=8*60,hi=mini?16*60:17*60;
+  timed.forEach(m=>{lo=Math.min(lo,Math.floor(m.b/60)*60);hi=Math.max(hi,Math.ceil(m.e/60)*60);});
+  const span=hi-lo,hours=span/60;
+  el.classList.toggle('mini',mini);
+  el.style.setProperty('--nd',dl.length);
+  let h=`<div class="tt-head"><span></span>${dl.map(d=>`<span>${mini?DAYNAME[d][0]:DAYNAME[d]}</span>`).join('')}</div><div class="tt-body" style="height:calc(var(--hour) * ${hours})">`;
+  h+='<div class="tt-hours">';if(!mini)for(let t=lo;t<=hi;t+=60)h+=`<span style="top:${(t-lo)/span*100}%">${S.h12?((t/60+11)%12+1)+(t<720?'a':'p'):t/60}</span>`;h+='</div>';
+  dl.forEach(d=>{
+    h+='<div class="tt-col">';
+    if(!mini)for(let t=lo+60;t<hi;t+=60)h+=`<div class="tt-line" style="top:${(t-lo)/span*100}%"></div>`;
+    all.forEach(it=>it.p.meets.forEach(m=>{
+      if(m.b==null||!m.d.includes(d))return;
+      const c=COURSES.get(it.p.course),col=cc(it.p.course);
+      const t=/lab/i.test(m.sec.type)?'Lab':/tutorial/i.test(m.sec.type)?'Tut':'';
+      const tip=`${code(c)} ${c.title} · ${m.sec.seq} · ${DAYNAME[d]} ${range(m.b,m.e)} · ${m.sec.instr.map(pretty).join(', ')}`;
+      h+=`<div class="blk${it.ghost?' ghost':''}${it.conflict?' conflict':''}" style="--c:${col};top:${(m.b-lo)/span*100}%;height:${(m.e-m.b)/span*100}%" title="${esc(tip)}">${mini?'':`<b>${code(c)}${t?' '+t:''}</b>${range(m.b,m.e)}<br><span class="muted">${esc(m.bldg)}${m.room?'-'+esc(m.room):''}</span>`}</div>`;
+    }));
+    h+='</div>';
+  });
+  el.innerHTML=h+'</div>';
+}
+function pickedItems(){
+  const ks=S.courses.filter(k=>S.picks[k]);
+  return ks.map(k=>{const p=PKG.get(S.picks[k]);return {p,conflict:ks.some(o=>o!==k&&overlaps(p,PKG.get(S.picks[o])))};});
+}
+function renderTT(){
+  const items=pickedItems();
+  drawGrid($('#tt'),items,{ghost:preview&&S.picks[preview.course]!==preview.id?preview:null});
+  const cr=items.reduce((a,i)=>a+i.p.cr,0);
+  $('#credits').textContent=items.length?cr+' credit'+(cr==1?'':'s'):'';
+  const clashes=[];items.forEach((a,i)=>items.slice(i+1).forEach(b=>{if(overlaps(a.p,b.p))clashes.push(code(COURSES.get(a.p.course))+' & '+code(COURSES.get(b.p.course)));}));
+  $('#clashBox').innerHTML=clashes.length?`<div class="warnbox">Time clash: ${clashes.join(', ')}</div>`:'';
+  $('#picks').innerHTML=S.courses.length?S.courses.map(k=>{
+    const c=COURSES.get(k),p=S.picks[k]&&PKG.get(S.picks[k]);
+    if(!p)return `<div class="pick none" style="--c:${cc(k)}"><div><b>${code(c)}</b> ${esc(c.title)}<div class="tiny muted">Not picked yet</div></div></div>`;
+    return `<div class="pick" style="--c:${cc(k)}"><div><b>${code(c)}</b> ${esc(c.title)} <span class="muted">· ${esc(p.label)}</span><div class="tiny muted">${p.instr.map(pretty).map(esc).join(', ')||'Professor TBA'}</div><div class="crn">CRN ${p.secs.map(s=>s.crn).join(', ')}</div></div><button class="small ghost" data-pick="${p.id}" aria-label="Remove">✕</button></div>`;
+  }).join(''):'';
+  const crns=items.flatMap(i=>i.p.secs.map(s=>s.crn));
+  $('#crnLine').textContent=crns.length?crns.length+' CRN'+(crns.length==1?'':'s'):'Pick sections to build your week';
+}
+
+/* auto-plan */
+function metrics(pkgs){
+  const by={};pkgs.forEach(p=>p.meets.forEach(m=>{if(m.b==null)return;[...m.d].forEach(d=>(by[d]=by[d]||[]).push([m.b,m.e]));}));
+  let days=0,gaps=0,st=0,en=0,first=9999,last=0;
+  for(const d in by){const a=by[d].sort((x,y)=>x[0]-y[0]);days++;st+=a[0][0];first=Math.min(first,a[0][0]);let end=a[0][1];
+    for(let i=1;i<a.length;i++){if(a[i][0]>end)gaps+=a[i][0]-end;end=Math.max(end,a[i][1]);}
+    en+=end;last=Math.max(last,end);}
+  return {days,gaps,start:days?st/days:0,end:days?en/days:0,first,last,seats:Math.min(...pkgs.map(p=>p.seats))};
+}
+let GEN=null;
+function generate(){
+  const cs=S.courses.filter(k=>S.include[k]!==false).map(k=>COURSES.get(k));
+  const lists=cs.map(c=>{
+    let ps=(S.keepPicks&&S.picks[c.key])?[PKG.get(S.picks[c.key])]:c.pkgs.filter(p=>passes(p)&&!S.excluded[p.id]);
+    return {c,ps};
+  });
+  const empty=lists.filter(l=>!l.ps.length).map(l=>l.c);
+  if(!cs.length)return {err:'Add courses (and keep them ticked) to generate timetables.'};
+  if(empty.length)return {err:`No section of ${empty.map(c=>'<b>'+code(c)+'</b>').join(', ')} fits your filters. Loosen the filters or un-tick that course on the left.`};
+  lists.sort((a,b)=>a.ps.length-b.ps.length);
+  const LIMIT=20000,res=[],cur=[];let capped=false;
+  (function rec(i){
+    if(res.length>=LIMIT){capped=true;return;}
+    if(i===lists.length){res.push(cur.slice());return;}
+    for(const p of lists[i].ps){
+      if(cur.some(q=>overlaps(p,q)))continue;
+      cur.push(p);
+      if(!S.maxDays||new Set(cur.flatMap(q=>q.meets.filter(m=>m.b!=null).flatMap(m=>[...m.d]))).size<=S.maxDays)rec(i+1);
+      cur.pop();
+      if(capped)return;
+    }
+  })(0);
+  if(!res.length)return {err:`Every combination has a time clash${S.maxDays?` or needs more than ${S.maxDays} days`:''} under the current filters. Try allowing more days or a wider time window, or un-tick a course.`};
+  return {res:res.map(ps=>({ps,m:metrics(ps)})),capped};
+}
+function sortGen(){
+  const s=S.genSort,k={
+    days:(a,b)=>a.m.days-b.m.days||a.m.gaps-b.m.gaps||b.m.start-a.m.start,
+    gaps:(a,b)=>a.m.gaps-b.m.gaps||a.m.days-b.m.days||b.m.start-a.m.start,
+    late:(a,b)=>b.m.first-a.m.first||b.m.start-a.m.start||a.m.days-b.m.days,
+    early:(a,b)=>a.m.last-b.m.last||a.m.end-b.m.end||a.m.days-b.m.days,
+    seats:(a,b)=>b.m.seats-a.m.seats||a.m.days-b.m.days
+  }[s];
+  GEN.res.sort(k);
+}
+function renderGen(){
+  const out=$('#genOut');
+  if(!DATA){out.innerHTML=welcome();return;}
+  GEN=generate();
+  if(GEN.err){out.innerHTML=`<div class="notice">${GEN.err}</div>`;return;}
+  sortGen();
+  const n=GEN.res.length;
+  const both=!S.filters.noGrp.includes('Men')&&!S.filters.noGrp.includes('Women');
+  let h=(both?`<div class="notice tiny" style="margin-bottom:10px">These plans can mix men's and women's sections. Untick the one you can't take under <b>Filters → Sections for</b>.</div>`:'')+`<p class="muted" style="margin-top:0">${GEN.capped?'More than ':''}${n.toLocaleString()} clash-free timetable${n==1?'':'s'} for ${S.courses.filter(k=>S.include[k]!==false).length} courses. Showing the best ${Math.min(genLimit,n)}.</p><div class="gen-grid">`;
+  GEN.res.slice(0,genLimit).forEach((g,i)=>{
+    const m=g.m;
+    h+=`<div class="gcard"><div class="stats"><span><b>${m.days}</b> day${m.days==1?'':'s'}</span>${m.days?`<span><b>${fmt(m.first)}${ampm(m.first)}</b> – <b>${fmt(m.last)}${ampm(m.last)}</b></span>`:''}<span><b>${Math.round(m.gaps/6)/10}h</b> gaps</span></div>
+      <div class="tt mini" data-mini="${i}"></div>
+      <div class="secs">${g.ps.map(p=>`<div style="--c:${cc(p.course)}"><span class="dot"></span><b>${code(COURSES.get(p.course))}</b> ${esc(p.label)} · ${esc(pretty(p.instr[0]||'TBA'))}</div>`).join('')}</div>
+      <button class="small primary" data-use="${i}">Use this timetable</button></div>`;
+  });
+  h+='</div>';
+  if(n>genLimit)h+=`<div style="text-align:center;margin-top:12px"><button id="genMore">Show more</button></div>`;
+  out.innerHTML=h;
+  out.querySelectorAll('[data-mini]').forEach(el=>drawGrid(el,GEN.res[+el.dataset.mini].ps.map(p=>({p})),{mini:true}));
+}
+
+/* orchestration */
+function renderAll(){
+  renderHeader();renderFilters();renderSearch();renderMyCourses();
+  $('#tab-browse').hidden=S.tab!=='browse';$('#tab-gen').hidden=S.tab!=='gen';
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===S.tab));
+  $('#genSort').value=S.genSort;$('#maxDays').value=S.maxDays;$('#keepPicks').checked=S.keepPicks;
+  if(S.tab==='browse')renderBrowse();else{genLimit=24;renderGen();}
+  renderTT();
+}
+function update(){save();renderAll();}
+
+function addCourse(k){if(!S.courses.includes(k)){S.courses.push(k);}}
+function togglePick(id){
+  const p=PKG.get(id);if(!p)return;
+  if(S.picks[p.course]===id)delete S.picks[p.course];else S.picks[p.course]=id;
+  preview=null;update();
+}
+function importText(txt){
+  try{
+    const d=normalize(txt);setData(d);update();
+    toast(`Loaded ${d.sections.length} sections for ${d.termDesc||d.term}`);
+    return true;
+  }catch(e){toast(e.message||'Could not read that data');return false;}
+}
+
+/* grabber scripts */
+const grabSrc=cfg=>`(${uosGrab.toString()})(${JSON.stringify(cfg)},${mapSection.toString()})`;
+function openGet(){
+  const cs=S.courses.join(', ');if(cs&&!$('#cCourses').value)$('#cCourses').value=cs;
+  $('#getDlg').showModal();
+}
+
+/* events */
+document.addEventListener('click',e=>{
+  const t=e.target.closest('button,[data-day],[data-campus],[data-grp]');if(!t)return;
+  const d=t.dataset;
+  if(d.add){addCourse(d.add);$('#courseSearch').focus();update();}
+  else if(d.rm){S.courses=S.courses.filter(k=>k!==d.rm);delete S.picks[d.rm];update();}
+  else if(d.pick){togglePick(d.pick);}
+  else if(d.ex){if(S.excluded[d.ex])delete S.excluded[d.ex];else S.excluded[d.ex]=1;update();}
+  else if(d.day){const f=S.filters;f.days=f.days.includes(d.day)?f.days.replace(d.day,''):f.days+d.day;update();}
+  else if(d.avoid){e.preventDefault();const f=S.filters;f.noProfs=f.noProfs.includes(d.avoid)?f.noProfs.filter(n=>n!==d.avoid):[...f.noProfs,d.avoid];f.profs=f.profs.filter(n=>n!==d.avoid);update();}
+  else if(d.grp){const f=S.filters;f.noGrp=f.noGrp.includes(d.grp)?f.noGrp.filter(g=>g!==d.grp):[...f.noGrp,d.grp];update();}
+  else if(d.campus){const f=S.filters;f.noCampus=f.noCampus.includes(d.campus)?f.noCampus.filter(c=>c!==d.campus):[...f.noCampus,d.campus];update();}
+  else if(d.use!=null){const g=GEN.res[+d.use];g.ps.forEach(p=>S.picks[p.course]=p.id);update();toast('Timetable applied. Copy the CRNs under My timetable.');}
+  else if(d.tab){S.tab=d.tab;update();}
+  else if(t.id==='genMore'){genLimit+=24;renderGen();}
+  else if(d.close!=null){t.closest('dialog').close();}
+});
+document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('.chip')){e.preventDefault();e.target.click();}});
+document.addEventListener('change',e=>{
+  const t=e.target,f=S.filters;
+  if(t.dataset.inc){S.include[t.dataset.inc]=t.checked;update();}
+  else if(t.id==='fFrom'){f.from=t.value;update();}
+  else if(t.id==='fTo'){f.to=t.value;update();}
+  else if(t.id==='fOpen'){f.open=t.checked;update();}
+  else if(t.dataset.dt){f.dayTimes={...f.dayTimes,[t.dataset.dt]:{...f.dayTimes[t.dataset.dt],[t.dataset.k]:t.value}};update();}
+  else if(t.id==='fNoTba'){f.noTba=t.checked;update();}
+  else if(t.id==='fBreakFrom'){f.breakFrom=t.value;update();}
+  else if(t.id==='fBreakTo'){f.breakTo=t.value;update();}
+  else if(t.id==='sortSel'){S.sort=t.value;update();}
+  else if(t.id==='showFiltered'){S.showFiltered=t.checked;update();}
+  else if(t.dataset.prof){f.profs=t.checked?[...f.profs,t.dataset.prof]:f.profs.filter(n=>n!==t.dataset.prof);update();}
+  else if(t.id==='genSort'){S.genSort=t.value;update();}
+  else if(t.id==='maxDays'){S.maxDays=+t.value;update();}
+  else if(t.id==='keepPicks'){S.keepPicks=t.checked;update();}
+});
+$('#fInstr').addEventListener('input',renderProfList);
+$('#clearProfs').onclick=()=>{S.filters.profs=[];S.filters.noProfs=[];update();};
+$('#crnLoad').onclick=loadCrns;
+$('#crnIn').addEventListener('keydown',e=>{if(e.key==='Enter')loadCrns();});
+function loadCrns(){
+  if(!DATA){toast('Load class data first');return;}
+  const want=[...new Set($('#crnIn').value.match(/\d{5}/g)||[])];
+  if(!want.length){toast('Type or paste 5-digit CRNs');return;}
+  const left=new Set(want),byCourse={};
+  want.forEach(crn=>{const s=SEC.get(crn);if(s)(byCourse[s.key]=byCourse[s.key]||[]).push(crn);});
+  for(const k in byCourse){
+    const crns=byCourse[k],c=COURSES.get(k);
+    const best=c.pkgs.map(p=>[p,p.secs.filter(s=>crns.includes(s.crn)).length]).sort((a,b)=>b[1]-a[1])[0];
+    if(!best||!best[1])continue;
+    addCourse(k);S.picks[k]=best[0].id;best[0].secs.forEach(s=>left.delete(s.crn));
+  }
+  update();
+  $('#crnIn').value=[...left].join(' ');
+  toast(left.size?`Not in this term's data: ${[...left].join(', ')}`:`Loaded ${want.length} CRN${want.length==1?'':'s'}`);
+}
+$('#courseSearch').addEventListener('input',renderSearch);
+$('#courseSearch').addEventListener('keydown',e=>{
+  if(e.key!=='Enter'||!DATA)return;
+  const v=e.target.value;const toks=v.split(/[,;\n]+/).map(t=>t.replace(/[\s-]/g,'')).filter(Boolean);
+  const exact=toks.filter(t=>COURSES.has(t));
+  if(exact.length){exact.forEach(addCourse);const miss=toks.filter(t=>!COURSES.has(t));e.target.value=miss.join(', ');update();toast(`Added ${exact.length} course${exact.length==1?'':'s'}${miss.length?` · not found: ${miss.join(', ')}`:''}`);}
+  else{const b=$('#searchResults [data-add]:not([disabled])');if(b)b.click();}
+});
+$('#tab-browse').addEventListener('mouseover',e=>{const r=e.target.closest('.prow[data-pkg]');const p=r?PKG.get(r.dataset.pkg):null;if(p!==preview){preview=p;renderTT();}});
+$('#tab-browse').addEventListener('mouseleave',()=>{if(preview){preview=null;renderTT();}});
+$('#resetFilters').onclick=()=>{S.filters={...DEF_FILTERS,noCampus:[],noGrp:[]};update();};
+$('#btnClock').onclick=()=>{S.h12=!S.h12;update();};
+$('#btnGet').onclick=openGet;
+$('#copyScript').onclick=async()=>{
+  const term=$('#cTerm').value.trim(),courses=$('#cCourses').value.trim();
+  const src=grabSrc({term:term||null,courses:courses||null});
+  try{await navigator.clipboard.writeText(src);toast('Script copied. Paste it in the UoS page console.');}
+  catch(e){$('#pasteArea').value=src;toast('Could not copy automatically');}
+};
+$('#bmkLink').href='javascript:'+encodeURIComponent(grabSrc({term:null,courses:null}));
+$('#bmkLink').addEventListener('click',e=>{e.preventDefault();toast('Drag this button to your bookmarks bar instead of clicking it.');});
+$('#btnPaste').onclick=async()=>{
+  try{const t=await navigator.clipboard.readText();if(t&&t.trim().startsWith('{')&&importText(t))return;}catch(e){}
+  $('#pasteArea').value='';$('#pasteDlg').showModal();$('#pasteArea').focus();
+};
+$('#pasteLoad').onclick=()=>{if(importText($('#pasteArea').value))$('#pasteDlg').close();};
+$('#fileIn').onchange=async e=>{const f=e.target.files[0];if(f)importText(await f.text());e.target.value='';};
+$('#copyCrns').onclick=async()=>{
+  const crns=pickedItems().flatMap(i=>i.p.secs.map(s=>s.crn));
+  if(!crns.length){toast('Pick some sections first');return;}
+  try{await navigator.clipboard.writeText(crns.join(', '));toast('Copied: '+crns.join(', '));}catch(e){toast(crns.join(', '));}
+};
+$('#clearPicks').onclick=()=>{if(Object.keys(S.picks).length&&confirm('Remove all picked sections from your timetable?')){S.picks={};update();}};
+let dragDepth=0;
+addEventListener('dragenter',e=>{if(e.dataTransfer?.types?.includes('Files')){dragDepth++;document.body.classList.add('dropping');}});
+addEventListener('dragleave',()=>{if(--dragDepth<=0){dragDepth=0;document.body.classList.remove('dropping');}});
+addEventListener('dragover',e=>{if(e.dataTransfer?.types?.includes('Files'))e.preventDefault();});
+addEventListener('drop',async e=>{dragDepth=0;document.body.classList.remove('dropping');const f=e.dataTransfer?.files?.[0];if(f){e.preventDefault();importText(await f.text());}});
+
+load();renderAll();
+</script>
+</body>
+</html>
