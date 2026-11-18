@@ -1,0 +1,11 @@
+name: ntfy test
+on: workflow_dispatch
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          [ -n "$NTFY_TOPIC" ] || { echo "NTFY_TOPIC secret is empty"; exit 1; }
+          curl -sf -H "Title: UoS planner" -H "Tags: white_check_mark" -H "Click: https://minuii.github.io/planner/" \
+            -d "Test alert: phone notifications work." "https://ntfy.sh/$NTFY_TOPIC" > /dev/null && echo sent
+        env: {NTFY_TOPIC: "${{ secrets.NTFY_TOPIC }}"}
