@@ -2,7 +2,7 @@
 
 Tools for planning a University of Sharjah timetable and registering for it.
 
-**Live planner:** https://minuii.github.io/planner/ (fresh UoS data every ~15 min via GitHub Actions).
+**Live planner:** https://minuii.github.io/planner/ (fresh UoS data every 15 min via GitHub Actions; to pause: `gh workflow disable planner.yml -R Minuii/planner`).
 
 | File | What it is |
 |---|---|

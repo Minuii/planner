@@ -1,18 +1,37 @@
 name: planner
+# GitHub runs cron jobs on quiet repos only every few hours, so instead one run loops:
+# refresh every 15 min for ~5.5 h, then starts the next run itself. The cron is only a backup starter.
 on:
-  schedule: [{cron: "*/15 * * * *"}]  # GitHub may delay scheduled runs a few minutes
+  schedule: [{cron: "*/30 * * * *"}]
   workflow_dispatch:
-  push: {branches: [main]}
-permissions: {contents: read, pages: write, id-token: write}
-concurrency: {group: pages, cancel-in-progress: true}
+permissions: {contents: write, actions: write}
+concurrency: {group: planner, cancel-in-progress: false}
 jobs:
-  deploy:
+  refresh:
     runs-on: ubuntu-latest
-    environment: {name: github-pages, url: "${{ steps.d.outputs.page_url }}"}
+    timeout-minutes: 350
+    env: {GH_TOKEN: "${{ github.token }}"}
     steps:
       - uses: actions/checkout@v4
-      - run: python3 uos_classes.py --term 202620 --no-open --out _site && mv _site/uos-planner-202620.html _site/index.html
-      - uses: actions/upload-pages-artifact@v3
-        with: {path: _site}
-      - id: d
-        uses: actions/deploy-pages@v4
+      - name: Refresh every 15 min
+        run: |
+          git config --global user.name "planner-bot"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          end=$((SECONDS + 330*60))
+          while :; do
+            start=$SECONDS
+            git pull -q --ff-only || true   # pick up planner changes pushed to main
+            rm -rf _site
+            if python3 uos_classes.py --term 202620 --no-open --out _site; then
+              mv _site/uos-planner-202620.html _site/index.html && touch _site/.nojekyll
+              # one force-pushed commit, so the data history never piles up
+              (cd _site && git init -q -b gh-pages && git add -A && git commit -qm "data $(date -u +%FT%TZ)" \
+                && git push -qf "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages) \
+                && echo "published $(date -u +%T)"
+            fi
+            [ $((SECONDS + 900)) -lt $end ] || break
+            s=$((900 - (SECONDS - start))); [ $s -gt 0 ] && sleep $s
+          done
+      - name: Start the next run
+        if: always()
+        run: gh workflow run planner.yml -R "$GITHUB_REPOSITORY"
