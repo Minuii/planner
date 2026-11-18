@@ -78,12 +78,27 @@
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ create: [], update: models, destroy: [], uniqueSessionId: sid })
       }, 1);
-      const rows = (j.data && j.data.update) || [];
+      let rows = (j.data && j.data.update) || [];
       if (!rows.length) throw new Error('unexpected submit reply: ' + strip(JSON.stringify(j)).slice(0, 300));
+      // closed section: if Banner offers a waitlist action for it, submit those again as Waitlisted
+      const failed = r => !/regist/i.test(r.statusDescription || '') || (r.messages || []).some(m => m.type === 'ERROR');
+      const wl = rows.filter(failed).map(r => [r, (r.registrationActions || []).find(a => /wait/i.test(a.description || ''))]).filter(x => x[1]);
+      if (wl.length) {
+        say('warn', `Closed: ${wl.map(x => x[0].courseReferenceNumber).join(', ')}. Joining the waitlist…`);
+        try {
+          const w = await json('classRegistration/submitRegistration/batch', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ create: [], update: wl.map(([r, a]) => ({ ...r, selectedAction: a.courseRegistrationStatus || a.voiceType || a.code })), destroy: [], uniqueSessionId: sid })
+          }, 1);
+          const back = new Map(((w.data && w.data.update) || []).map(r => [r.courseReferenceNumber, r]));
+          rows = rows.map(r => back.get(r.courseReferenceNumber) || r);
+        } catch (e) { if (e instanceof LoggedOut) throw e; say('warn', 'Waitlist step failed: ' + e.message); }
+      }
       say('table', rows.map(r => ({ CRN: r.courseReferenceNumber, status: r.statusDescription, messages: (r.messages || []).map(m => strip(m.message)).join('; ') })));
-      const ok = rows.filter(r => /regist/i.test(r.statusDescription || '') && !(r.messages || []).some(m => m.type === 'ERROR')).length;
+      const ok = rows.filter(r => !failed(r)).length, waiting = rows.filter(r => /wait/i.test(r.statusDescription || '')).length;
+      if (waiting) say('log', `${waiting} CRN(s) WAITLISTED. Watch your UoS email/phone alerts for a seat.`, 'font-size:14px;color:red;font-weight:bold');
       say('log', `${ok} of ${CRNS.length} CRNs look registered (${Math.round(performance.now() - t0)} ms). Refresh Register for Classes to confirm.`, 'font-size:14px;font-weight:bold');
-      if (ok < CRNS.length) manual('some CRNs failed (see the table)');
+      if (ok + waiting < CRNS.length) manual('some CRNs failed (see the table)');
     }
     function manual(why) {
       beep(440, 1500);
