@@ -11,7 +11,7 @@ Tools for planning a University of Sharjah timetable and registering for it.
 | `uos_classes.py` | Downloads every Spring section from UoS and rebuilds the planner. |
 | `uos-classes-202620.json` | The raw downloaded data (the planner can import it). |
 | `uos_probe.py` | Extra checks: site health, section details, seat watcher, "registration open" alert. |
-| `uos_autoreg.js` | Auto-register script you paste into your logged-in browser tab. |
+| `extension/` | Chrome extension: auto-register panel on the UoS registration page (`uos_autoreg.js` also works pasted in the Console). |
 | `uos_prereqs.py` | Grabs every course's prerequisites into `uos-prereqs-202620.json` for the planner's *What can I take* tab. Re-run if UoS changes them. |
 
 Everything needs only Python 3.8+ (no installs) and Chrome.
@@ -109,37 +109,35 @@ Stop any watcher with `Ctrl+C`.
 
 ---
 
-## 5. Auto-register (`uos_autoreg.js`)
+## 5. Auto-register (`extension/`)
 
 Runs inside **your own logged-in Chrome tab**. No cookies, no passwords: it uses the session your browser
 already has.
 
-### Test it first (any day)
+### Install the extension (once)
 
-1. In Chrome, go to the UoS registration site and click **Register for Classes**. Sign in.
-2. Open `uos_autoreg.js` in Notepad. Leave `GO = false`.
-3. Select all, copy.
-4. In the registration tab press **F12** → **Console**. Paste, press **Enter**.
-   (If Chrome asks, type `allow pasting` and press Enter first, then paste again.)
-5. You should see:
-   ```
-   Logged in. Terms open to you for registration: none yet
-   hh:mm:ss not open yet: 202620 not in your registration terms yet (open now: none)
-   ```
-   If it says **Not logged in**, sign in on that tab and paste again.
+1. In Chrome open `chrome://extensions` and turn on **Developer mode** (top right).
+2. Click **Load unpacked** and pick the `extension` folder inside this folder.
+3. Open the UoS registration site and click **Register for Classes**. A green **UoS auto-register** panel
+   appears bottom-right (click its header to fold it away).
+
+If you change files in `extension/`, press the reload icon on its card in `chrome://extensions`, then refresh the page.
+
+### Test it (any day)
+
+In the panel: put your CRNs, leave **Actually register** unticked, clear **Opens at**, press **Start**.
+You should see `Logged in. Terms open to you for registration: ...` and one `not open yet: ...` line.
+If it says **LOGGED OUT**, sign in on that tab and press Start again.
 
 ### On registration day
 
-1. A few minutes before registration opens, sign in to **Register for Classes** in Chrome.
-2. Open `uos_autoreg.js` in Notepad and set the four lines at the top:
-   ```js
-   const CRNS = ['22459', '21046', '20112', '21036', '21037', '21047', '20203'];  // your plan
-   const TERM = '202620';
-   const AT = '09:00';   // the time registration opens (24-hour, e.g. '14:00')
-   const GO = true;      // actually register
-   ```
-3. Copy everything, paste into the Console of the registration tab, press Enter.
-4. Leave the tab **open** and the PC **awake** (plugged in, no sleep).
+1. A few minutes before it opens, sign in to **Register for Classes** (refresh the tab).
+2. In the panel: CRNs `22459 21046 20112 21036 21037 21047 20203`, **Opens at** `09:00`, term `202620`,
+   tick **Actually register**, press **Start** and confirm.
+3. Leave the tab **open and in front**, the PC **plugged in and awake**.
+
+No extension? Open `extension/uos_autoreg.js` in Notepad, set `GO: true` in `SETTINGS` at the top, copy it all,
+paste into the registration tab's Console (F12) and press Enter. Same behaviour, results in the Console.
 
 What it does:
 
@@ -159,7 +157,7 @@ What it does:
 After it runs, **refresh the Register for Classes page to confirm**. If a CRN failed, the table says why.
 Add that section by hand under the *Enter CRNs* tab.
 
-To stop it early, type in the Console: `uosStop = true`
+To stop it early: press **Stop** on the panel (Console way: type `uosStop = true`).
 
 ### Things to know
 
@@ -178,8 +176,8 @@ To stop it early, type in the Console: `uosStop = true`
 | `uos_classes.py` → `HTTP Error 500` | UoS server problem. Run `python uos_probe.py health`, wait, retry. |
 | Planner shows old seat counts | Run `python uos_classes.py --term 202620` again. |
 | Picking a lab removes the lecture | Fixed: lecture + lab now come as one option. Rebuild with the command above if you see it. |
-| `uos_autoreg.js` → "Not logged in" | Click Register for Classes, sign in on that same tab, paste again. |
-| `uos_autoreg.js` → "Open a reg-prod… page first" | You pasted it on a different site. Use the UoS registration tab. |
+| Auto-register → "LOGGED OUT" | Click Register for Classes, sign in on that same tab, press Start (or paste) again. |
+| No panel on the page | Check the extension is on in `chrome://extensions`, and refresh the registration tab. |
 | Chrome won't let you paste in the Console | Type `allow pasting`, press Enter, then paste. |
 
 **Delete `uos_cookie.txt`** if it's still in this folder. It's left over from an old approach and contains a

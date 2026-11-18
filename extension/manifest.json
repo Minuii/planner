@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "UoS Auto-Register",
+  "version": "1.0",
+  "description": "Panel on the UoS registration pages: enter CRNs and the opening time, it registers the moment registration opens.",
+  "content_scripts": [{
+    "matches": ["https://reg-prod.ec.sharjah.ac.ae/StudentRegistrationSsb/*"],
+    "js": ["uos_autoreg.js", "panel.js"],
+    "run_at": "document_idle"
+  }]
+}
