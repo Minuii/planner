@@ -6,7 +6,7 @@
 (async () => {
   const CRNS = ['22459', '21046', '20112', '21036', '21037', '21047', '20203'];
   const TERM = '202620';
-  const AT = '';        // e.g. '09:00' = registration opens at 9:00; until a minute before, it only checks every 4 min
+  const AT = '09:00';      // e.g. '09:00' = registration opens at 9:00; until a minute before, it only checks every 4 min
   const GO = false;     // true = actually register the moment it opens
 
   const base = '/StudentRegistrationSsb/ssb/';
