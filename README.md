@@ -149,6 +149,11 @@ What it does:
   nothing blocking you (like no time ticket). Otherwise it prints Banner's reason and keeps waiting.
 - When open: it beeps, submits **all CRNs together** (so lecture + lab are checked as a pair), and prints a
   table with each CRN's status and any error message.
+- Wi-Fi drops and slow replies are retried (15 s timeout per request), so it keeps going.
+- If your login expires, it beeps low for 2 s and prints **LOGGED OUT**: sign in again and paste again.
+- If anything fails at registration time, it beeps, prints **DO IT BY HAND NOW** in red and copies your CRNs
+  to the clipboard: paste them under *Enter CRNs*.
+- Pasting it again stops the older copy, so it never registers twice.
 
 After it runs, **refresh the Register for Classes page to confirm**. If a CRN failed, the table says why.
 Add that section by hand under the *Enter CRNs* tab.
