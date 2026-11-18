@@ -142,7 +142,7 @@ paste into the registration tab's Console (F12) and press Enter. Same behaviour,
 What it does:
 
 - Until a minute before `AT`, it checks every few minutes (this also stops your session timing out).
-- From a minute before, it checks every second.
+- From a minute before until 5 min after, it checks every 0.25 s (then every second).
 - It only counts registration as open when Spring appears in your registration terms **and** Banner reports
   nothing blocking you (like no time ticket). Otherwise it prints Banner's reason and keeps waiting.
 - When open: it beeps, submits **all CRNs together** (so lecture + lab are checked as a pair), and prints a

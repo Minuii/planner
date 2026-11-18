@@ -140,7 +140,8 @@
         }
         if (!AT && !GO) return say('log', `${now()} not open yet: ${s}`);  // quick test run
         if (early || i % 30 === 0 || s.startsWith('check failed')) say('log', `${now()} not open yet: ${s}${early ? ` · opens ${at.toLocaleTimeString()}, ${Math.round((at - Date.now()) / 60000)} min left` : ''}`);
-        await sleep(early ? Math.min(at - Date.now() - 60000, 240000) : 1000);
+        // from a minute before AT until 5 min after: every 0.25 s; otherwise every 1 s (don't hammer if it opens late)
+        await sleep(early ? Math.min(at - Date.now() - 60000, 240000) : at && Date.now() - at < 300000 ? 250 : 1000);
       }
       say('log', 'Stopped.');
     } catch (e) {
