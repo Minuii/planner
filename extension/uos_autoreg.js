@@ -11,7 +11,7 @@
     CRNS: ['22459', '21046', '20112', '21036', '21037', '21047', '20203'],
     TERM: '202620',
     AT: '09:00',  // registration opening time (24h, your PC clock). Until a minute before, it checks every 4 min
-    GO: false,    // true = actually register the moment it opens
+    GO: true,     // true = actually register the moment it opens (false = only beep)
   };
 
   // say(kind, message, css): kind is log / warn / error / table. The extension passes its own to show it on the panel.

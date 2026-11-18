@@ -136,7 +136,7 @@ If it says **LOGGED OUT**, sign in on that tab and press Start again.
    tick **Actually register**, press **Start** and confirm.
 3. Leave the tab **open and in front**, the PC **plugged in and awake**.
 
-No extension? Open `extension/uos_autoreg.js` in Notepad, set `GO: true` in `SETTINGS` at the top, copy it all,
+No extension? Open `extension/uos_autoreg.js` in Notepad (`GO: true` is already set in `SETTINGS` at the top), copy it all,
 paste into the registration tab's Console (F12) and press Enter. Same behaviour, results in the Console.
 
 What it does:
