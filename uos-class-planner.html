@@ -831,6 +831,7 @@ async function checkSeats(){
     const o=old.get(s.crn),name=`${s.subj} ${s.num} sec ${s.seq} (CRN ${s.crn})`;
     if(!o)msgs.push(`New section: ${name}, ${s.seats} seats`);
     else if(o.seats<=0&&s.seats>0)msgs.push(`Seats open: ${name}, ${s.seats} free`);
+    else if(o.seats>0&&s.seats<=0&&Object.values(S.picks).some(id=>PKG.get(id)?.secs.some(x=>x.crn===s.crn)))msgs.push(`Now FULL: ${name}, one of your picks`);
   });
   setData(d,false);update();
   if(!msgs.length)return;
