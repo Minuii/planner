@@ -26,6 +26,8 @@ def changes(old, new, courses, crns):
                 out.append(f"Seats open: {name}, {s['seats']} free")
         if s["crn"] in crns and o and o["seats"] > 0 >= s["seats"]:
             out.append(f"FULL now: {name}")
+        elif s["crn"] in crns and o and any(o["seats"] > t >= s["seats"] for t in (10, 5)):
+            out.append(f"Filling up: {name}, {s['seats']} left (was {o['seats']})")
     return out
 
 

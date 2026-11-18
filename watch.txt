@@ -7,5 +7,5 @@
 0408205  # Fluid Mechanics
 0202207  # Technical Writing
 
-# CRNs: alert when one of my sections fills up
+# CRNs: alert when one of my sections drops to 10 seats, to 5, and when it's full
 22459 21046 20112 21036 21037 21047 20203
