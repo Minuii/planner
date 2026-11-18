@@ -10,7 +10,7 @@ jobs:
   refresh:
     runs-on: ubuntu-latest
     timeout-minutes: 350
-    env: {GH_TOKEN: "${{ github.token }}"}
+    env: {GH_TOKEN: "${{ github.token }}", NTFY_TOPIC: "${{ secrets.NTFY_TOPIC }}"}
     steps:
       - uses: actions/checkout@v4
       - name: Refresh every 15 min
@@ -20,9 +20,12 @@ jobs:
           end=$((SECONDS + 330*60))
           while :; do
             start=$SECONDS
-            git pull -q --ff-only || true   # pick up planner changes pushed to main
+            git pull -q --ff-only || true   # pick up planner/watch.txt changes pushed to main
+            cp _site/uos-classes-202620.json old.json 2>/dev/null \
+              || curl -sf "https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}/uos-classes-202620.json" -o old.json || true
             rm -rf _site
             if python3 uos_classes.py --term 202620 --no-open --out _site; then
+              python3 uos_notify.py old.json _site/uos-classes-202620.json || true
               mv _site/uos-planner-202620.html _site/index.html && touch _site/.nojekyll
               # one force-pushed commit, so the data history never piles up
               (cd _site && git init -q -b gh-pages && git add -A && git commit -qm "data $(date -u +%FT%TZ)" \

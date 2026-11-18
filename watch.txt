@@ -1,0 +1,11 @@
+# Phone alerts (ntfy). Edit and push; the next 15-min refresh uses it.
+# Courses: alert when a new section appears or a full section gets seats
+1440261  # Diff. Equations
+0408200  # Dynamics
+0201102  # Arabic
+0408150  # Engineering Graphics
+0408205  # Fluid Mechanics
+0202207  # Technical Writing
+
+# CRNs: alert when one of my sections fills up
+22459 21046 20112 21036 21037 21047 20203
