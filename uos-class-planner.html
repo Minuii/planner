@@ -468,6 +468,8 @@ let preview=null, genLimit=24;
 
 function load(){
   try{const s=JSON.parse(localStorage.getItem(LS)||'null');if(s)S={...S,...s,filters:{...DEF_FILTERS,...s.filters}};}catch(e){}
+  const h=new URLSearchParams(location.hash.slice(1));  // share link: #done=...&degree=...
+  if(h.has('done')||h.has('degree')){S.done=h.get('done')??S.done;S.degree=h.get('degree')??S.degree;S.tab='elig';history.replaceState(null,'',location.pathname);}
   if(window.UOS_DATA){setData(window.UOS_DATA,false);return;}
   try{const d=localStorage.getItem(LS+'.data');if(d)setData(JSON.parse(d),false);}catch(e){}
 }
