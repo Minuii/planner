@@ -243,6 +243,19 @@ textarea{min-height:160px;font-family:var(--mono);font-size:12px}
     <div class="tabs" role="tablist">
       <button data-tab="browse" class="active" role="tab">Sections</button>
       <button data-tab="gen" role="tab">Auto-plan</button>
+      <button data-tab="elig" role="tab">What can I take</button>
+    </div>
+    <div id="tab-elig" hidden>
+      <div class="card" style="margin-bottom:12px">
+        <div class="row2">
+          <div><label class="flabel" for="doneIn">Courses I've passed or am taking now</label>
+            <textarea id="doneIn" rows="5" placeholder="1440132 1430115 0408251 …  (any format, e.g. 1440 132)"></textarea></div>
+          <div><label class="flabel" for="degIn">My degree's study plan (optional)</label>
+            <textarea id="degIn" rows="5" placeholder="Copy the course list out of your study plan PDF and paste it here"></textarea></div>
+        </div>
+        <label class="check tiny" style="margin-top:8px"><input type="checkbox" id="eligAll"> Show courses outside my study plan too</label>
+      </div>
+      <div id="eligOut"></div>
     </div>
     <div id="tab-browse"></div>
     <div id="tab-gen" hidden>
@@ -450,7 +463,7 @@ const LS='uosPlanner.v1';
 const DEF_FILTERS={days:'UMTWRFS',from:'',to:'',noCampus:[],noGrp:[],profs:[],open:false,dayTimes:{},noProfs:[],breakFrom:'',breakTo:'',noTba:false};
 
 let DATA=null, COURSES=new Map(), PKG=new Map(), SEC=new Map(), CAMPUSES=[], DAYS_IN_DATA='MTWRF';
-let S={courses:[],picks:{},excluded:{},include:{},filters:{...DEF_FILTERS},h12:true,genSort:'days',maxDays:0,keepPicks:false,tab:'browse',showFiltered:false,sort:'section',plans:[],watch:false};
+let S={courses:[],picks:{},excluded:{},include:{},filters:{...DEF_FILTERS},h12:true,genSort:'days',maxDays:0,keepPicks:false,tab:'browse',showFiltered:false,sort:'section',plans:[],watch:false,done:'',degree:'',eligAll:false};
 let preview=null, genLimit=24;
 
 function load(){
@@ -810,11 +823,42 @@ function renderGen(){
 /* orchestration */
 function renderAll(){
   renderHeader();renderFilters();renderSearch();renderMyCourses();
-  $('#tab-browse').hidden=S.tab!=='browse';$('#tab-gen').hidden=S.tab!=='gen';
+  $('#tab-browse').hidden=S.tab!=='browse';$('#tab-gen').hidden=S.tab!=='gen';$('#tab-elig').hidden=S.tab!=='elig';
+  if(S.tab==='elig')renderElig();
   document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===S.tab));
   $('#genSort').value=S.genSort;$('#maxDays').value=S.maxDays;$('#keepPicks').checked=S.keepPicks;
-  if(S.tab==='browse')renderBrowse();else{genLimit=24;renderGen();}
+  if(S.tab==='browse')renderBrowse();else if(S.tab==='gen'){genLimit=24;renderGen();}
   renderTT();renderPlans();
+}
+/* what can I take: prerequisites from uos-prereqs-<term>.json (made by uos_prereqs.py) */
+let PRE=null;
+const codesIn=t=>new Set([...(t||'').matchAll(/\b(\d{4})\s*-?\s*(\d{3}(?:-[A-Z])?)\b/g)].map(m=>m[1]+m[2]));
+function prereqOk(expr,done){  // -> [ok, missing codes]
+  const toks=expr.split(' '),missing=toks.filter(t=>/^\d{7}/.test(t)&&!done.has(t));
+  const js=toks.map(t=>t==='and'?'&&':t==='or'?'||':t==='('||t===')'?t:t==='TEST'?'true':String(done.has(t))).join(' ');
+  try{return [Function('return '+js)(),missing];}catch(e){return [false,missing];}
+}
+async function renderElig(){
+  const out=$('#eligOut');
+  if($('#doneIn')!==document.activeElement)$('#doneIn').value=S.done;
+  if($('#degIn')!==document.activeElement)$('#degIn').value=S.degree;
+  $('#eligAll').checked=S.eligAll;
+  if(!DATA){out.innerHTML='<div class="empty">Load class data first.</div>';return;}
+  if(!PRE){try{PRE=await (await fetch(`uos-prereqs-${DATA.term}.json`)).json();}catch(e){out.innerHTML='<div class="notice">Prerequisite data isn\'t available here. Use the online planner (minuii.github.io/planner) or run <code>python uos_prereqs.py</code>.</div>';return;}}
+  const done=codesIn(S.done),deg=codesIn(S.degree),useDeg=deg.size&&!S.eligAll;
+  if(!done.size){out.innerHTML='<div class="empty">Type the courses you\'ve passed (and the ones you\'re taking now) to see what opens up.</div>';return;}
+  const can=[],locked=[];
+  for(const c of COURSES.values()){
+    if(done.has(c.key)||(useDeg&&!deg.has(c.key)))continue;
+    const [ok,miss]=PRE[c.key]?prereqOk(PRE[c.key],done):[true,[]];
+    (ok?can:locked).push([c,miss]);
+  }
+  const row=([c,miss],ok)=>{const on=S.courses.includes(c.key);return `<div class="res"><div class="t"><div><b>${code(c)}</b> ${esc(c.title)}</div><div class="tiny muted">${c.cr} cr${PRE[c.key]?' · needs '+esc(PRE[c.key]):''}${!ok&&miss.length?` · <b>not passed yet: ${miss.map(esc).join(', ')}</b>`:''}</div></div>${ok?`<button class="small${on?'':' primary'}" data-add="${c.key}"${on?' disabled':''}>${on?'Added':'Add'}</button>`:''}</div>`;};
+  const sortK=a=>a[0].key;
+  can.sort((a,b)=>sortK(a).localeCompare(sortK(b)));locked.sort((a,b)=>sortK(a).localeCompare(sortK(b)));
+  out.innerHTML=`<section class="card"><h2>You can take (${can.length} offered this term)</h2>${can.map(x=>row(x,true)).join('')||'<div class="empty">Nothing yet.</div>'}</section>`
+    +(useDeg||locked.length<200?`<section class="card" style="margin-top:12px"><h2>Not yet: missing prerequisites (${locked.length})</h2>${locked.map(x=>row(x,false)).join('')||'<div class="empty">None.</div>'}</section>`:'')
+    +`<p class="tiny muted">${useDeg?`Showing courses from your study plan that are offered this term. `:''}Based on the catalog prerequisites only. Banner may also check grades, corequisites, major or level restrictions.</p>`;
 }
 function renderPlans(){
   $('#planList').innerHTML=S.plans.map((p,i)=>`<div class="pick" style="--c:var(--border)"><div><b>${esc(p.name)}</b><div class="crn">${p.crns.join(' ')||'no sections picked'}</div></div><div style="display:flex;gap:4px"><button class="small" data-planload="${i}">Load</button><button class="small ghost" data-plandel="${i}" aria-label="Delete ${esc(p.name)}">✕</button></div></div>`).join('');
@@ -928,6 +972,9 @@ function loadCrns(){
   toast(left.size?`Not in this term's data: ${[...left].join(', ')}`:`Loaded ${want.length} CRN${want.length==1?'':'s'}`);
 }
 $('#courseSearch').addEventListener('input',renderSearch);
+$('#doneIn').addEventListener('input',e=>{S.done=e.target.value;save();renderElig();});
+$('#degIn').addEventListener('input',e=>{S.degree=e.target.value;save();renderElig();});
+$('#eligAll').addEventListener('change',e=>{S.eligAll=e.target.checked;save();renderElig();});
 $('#courseSearch').addEventListener('keydown',e=>{
   if(e.key!=='Enter'||!DATA)return;
   const v=e.target.value;const toks=v.split(/[,;\n]+/).map(t=>t.replace(/[\s-]/g,'')).filter(Boolean);

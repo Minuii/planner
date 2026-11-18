@@ -12,6 +12,7 @@ Tools for planning a University of Sharjah timetable and registering for it.
 | `uos-classes-202620.json` | The raw downloaded data (the planner can import it). |
 | `uos_probe.py` | Extra checks: site health, section details, seat watcher, "registration open" alert. |
 | `uos_autoreg.js` | Auto-register script you paste into your logged-in browser tab. |
+| `uos_prereqs.py` | Grabs every course's prerequisites into `uos-prereqs-202620.json` for the planner's *What can I take* tab. Re-run if UoS changes them. |
 
 Everything needs only Python 3.8+ (no installs) and Chrome.
 

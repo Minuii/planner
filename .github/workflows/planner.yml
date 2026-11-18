@@ -26,7 +26,7 @@ jobs:
             rm -rf _site
             if python3 uos_classes.py --term 202620 --no-open --out _site; then
               python3 uos_notify.py old.json _site/uos-classes-202620.json || true
-              mv _site/uos-planner-202620.html _site/index.html && touch _site/.nojekyll
+              mv _site/uos-planner-202620.html _site/index.html && touch _site/.nojekyll && cp uos-prereqs-202620.json _site/
               # one force-pushed commit, so the data history never piles up
               (cd _site && git init -q -b gh-pages && git add -A && git commit -qm "data $(date -u +%FT%TZ)" \
                 && git push -qf "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages) \
