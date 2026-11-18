@@ -79,7 +79,7 @@
   }
   function manual(why) {
     beep(440, 1500);
-    console.log(`%cDO IT BY HAND NOW: ${why}. Go to Register for Classes > Enter CRNs and paste:\n${CRNS.join(' ')}`, 'font-size:16px;color:red;font-weight:bold');
+    console.log(`%cDO IT BY HAND NOW: ${why}.\n1) Fastest: Register for Classes > Plans tab > Add All > Submit\n2) Or: Enter CRNs tab, paste: ${CRNS.join(' ')}`, 'font-size:16px;color:red;font-weight:bold');
     try { navigator.clipboard.writeText(CRNS.join(' ')); console.log('(CRNs copied to your clipboard)'); } catch (e) {}
   }
 

@@ -152,7 +152,8 @@ What it does:
 - Wi-Fi drops and slow replies are retried (15 s timeout per request), so it keeps going.
 - If your login expires, it beeps low for 2 s and prints **LOGGED OUT**: sign in again and paste again.
 - If anything fails at registration time, it beeps, prints **DO IT BY HAND NOW** in red and copies your CRNs
-  to the clipboard: paste them under *Enter CRNs*.
+  to the clipboard. Fastest fix: *Plans* tab > **Add All** > **Submit** (your Plan Ahead plan has the same
+  7 CRNs), or paste the CRNs under *Enter CRNs*.
 - Pasting it again stops the older copy, so it never registers twice.
 
 After it runs, **refresh the Register for Classes page to confirm**. If a CRN failed, the table says why.
