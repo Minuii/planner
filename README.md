@@ -147,7 +147,9 @@ What it does:
   nothing blocking you (like no time ticket). Otherwise it prints Banner's reason and keeps waiting.
 - When open: it beeps, submits **all CRNs together** (so lecture + lab are checked as a pair), and prints a
   table with each CRN's status and any error message.
-- Wi-Fi drops and slow replies are retried (15 s timeout per request), so it keeps going.
+- Wi-Fi drops and slow replies are retried (30 s timeout per request), so it keeps going.
+- If the UoS server crashes while it's registering (500/502/503 errors, error pages, timeouts), it keeps retrying
+  each step for about 6 minutes before giving up. Retrying the submit can't register you twice.
 - If your login expires, it beeps low for 2 s and prints **LOGGED OUT**: sign in again and paste again.
 - If anything fails at registration time, it beeps, prints **DO IT BY HAND NOW** in red and copies your CRNs
   to the clipboard. Fastest fix: *Plans* tab > **Add All** > **Submit** (your Plan Ahead plan has the same

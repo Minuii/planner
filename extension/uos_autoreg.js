@@ -32,33 +32,40 @@
     const beep = (f = 880, ms = 700) => { try { const a = window.uosAudio || new AudioContext(), o = a.createOscillator(); a.resume?.(); o.connect(a.destination); o.frequency.value = f; o.start(); setTimeout(() => o.stop(), ms); } catch (e) {} };
     class LoggedOut extends Error {}
 
-    // one request; network errors and timeouts are retried, a lost login is not
-    async function req(path, opts = {}, tries = 3) {
+    // one request. Network errors, timeouts, server errors (5xx) and garbled replies (error pages) are retried;
+    // a lost login is not. Waits 0.5 s, 1 s, … up to 3 s between tries.
+    const RETRY = 120;  // during registration: keep trying ~6 min if the server is crashing
+    async function req(path, opts = {}, tries = 3, parse = false) {
       for (let i = 1; ; i++) {
         try {
-          const r = await fetch(base + path, { credentials: 'include', signal: AbortSignal.timeout(15000), ...opts, headers: { ...H, ...opts.headers } });
+          const r = await fetch(base + path, { credentials: 'include', signal: AbortSignal.timeout(30000), ...opts, headers: { ...H, ...opts.headers } });
           const t = await r.text();
           if (t.trim() === 'userNotLoggedIn' || r.url.includes('/login') || r.url.includes('saml')) throw new LoggedOut();
-          if (r.status >= 500 && i < tries) throw new Error('HTTP ' + r.status);
-          return t;
+          if (r.status >= 500) throw new Error('server error ' + r.status);
+          if (!parse) return t;
+          try { return JSON.parse(t); } catch (e) { throw new Error('unexpected reply from ' + path.split('?')[0] + ': ' + strip(t).slice(0, 150)); }
         } catch (e) {
-          if (e instanceof LoggedOut || i >= tries) throw e;
-          await sleep(500 * i);
+          if (e instanceof LoggedOut || i >= tries || stopped()) throw e;
+          if (i % 5 === 0) say('warn', `${now()} server struggling (${e.message || e}), still retrying ${path.split('?')[0].split('/').pop()}…`);
+          await sleep(Math.min(500 * i, 3000));
         }
       }
     }
-    const json = async (path, opts, tries) => { const t = await req(path, opts, tries); try { return JSON.parse(t); } catch (e) { throw new Error('Unexpected reply from ' + path.split('?')[0] + ': ' + strip(t).slice(0, 200)); } };
+    const json = (path, opts, tries) => req(path, opts, tries, true);
 
+    let listed = false;  // once Spring is in your registration terms it stays there, so check that only until it is
     async function isOpen() {
-      // Banner hands out a fwdURL even while closed, so first require the term in YOUR registration term list
-      const open = await json('classRegistration/getTerms?searchTerm=&offset=1&max=10');
-      if (!open.some(t => t.code === TERM)) return `${TERM} not in your registration terms yet (open now: ${open.map(t => t.code).join(', ') || 'none'})`;
+      if (!listed) {  // Banner hands out a fwdURL even while closed, so first require the term in YOUR registration term list
+        const open = await json('classRegistration/getTerms?searchTerm=&offset=1&max=10');
+        if (!open.some(t => t.code === TERM)) return `${TERM} not in your registration terms yet (open now: ${open.map(t => t.code).join(', ') || 'none'})`;
+        listed = true;
+      }
       const j = await json('term/search?mode=registration', {
         method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
         body: new URLSearchParams({ term: TERM, studyPath: '', studyPathText: '', startDatepicker: '', endDatepicker: '', uniqueSessionId: sid })
       });
       if ((j.studentEligFailures || []).length) return j.studentEligFailures.map(strip).join('; ');  // e.g. no time ticket yet
-      if ((j.fwdURL || '').includes('classRegistration')) { await req('classRegistration/classRegistration'); return true; }
+      if ((j.fwdURL || '').includes('classRegistration')) { await req('classRegistration/classRegistration', {}, RETRY); return true; }
       return JSON.stringify(j).slice(0, 300);
     }
 
@@ -66,18 +73,19 @@
       const t0 = performance.now(), models = [];
       for (const crn of CRNS) {  // one at a time: Banner keeps the cart in your session
         try {
-          const j = await json(`classRegistration/addRegistrationItem?term=${TERM}&courseReferenceNumber=${crn}&olr=false`);
+          const j = await json(`classRegistration/addRegistrationItem?term=${TERM}&courseReferenceNumber=${crn}&olr=false`, {}, RETRY);
           if (!j.success || !j.model) { say('warn', `${crn} could not add: ${strip(JSON.stringify(j.message || j)).slice(0, 300)}`); continue; }
           j.model.selectedAction = j.model.selectedAction || 'RW';
           models.push(j.model);
         } catch (e) { if (e instanceof LoggedOut) throw e; say('warn', `${crn} could not add: ${e.message}`); }
       }
       if (!models.length) throw new Error('none of the CRNs could be added');
-      // all CRNs in one batch so Banner checks lecture + lab links together; not retried, so it can't double-submit
+      // all CRNs in one batch so Banner checks lecture + lab links together. Retried on crashes: a CRN you're
+      // already in can't be registered twice (Banner just reports it as a duplicate on the second try).
       const j = await json('classRegistration/submitRegistration/batch', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ create: [], update: models, destroy: [], uniqueSessionId: sid })
-      }, 1);
+      }, RETRY);
       let rows = (j.data && j.data.update) || [];
       if (!rows.length) throw new Error('unexpected submit reply: ' + strip(JSON.stringify(j)).slice(0, 300));
       // closed section: if Banner offers a waitlist action for it, submit those again as Waitlisted
@@ -89,7 +97,7 @@
           const w = await json('classRegistration/submitRegistration/batch', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ create: [], update: wl.map(([r, a]) => ({ ...r, selectedAction: a.courseRegistrationStatus || a.voiceType || a.code })), destroy: [], uniqueSessionId: sid })
-          }, 1);
+          }, RETRY);
           const back = new Map(((w.data && w.data.update) || []).map(r => [r.courseReferenceNumber, r]));
           rows = rows.map(r => back.get(r.courseReferenceNumber) || r);
         } catch (e) { if (e instanceof LoggedOut) throw e; say('warn', 'Waitlist step failed: ' + e.message); }
@@ -107,7 +115,8 @@
     }
 
     try {
-      const terms = await json('classRegistration/getTerms?searchTerm=&offset=1&max=10');
+      const terms = await json('classRegistration/getTerms?searchTerm=&offset=1&max=10', {}, RETRY);
+      listed = terms.some(t => t.code === TERM);
       say('log', 'Logged in. Terms open to you for registration: ' + (terms.map(t => t.code + ' ' + t.description).join(', ') || 'none yet'));
       say('log', `Plan: ${CRNS.join(' ')} · term ${TERM} · ${AT ? 'opens ' + AT : 'no time set'} · ${GO ? 'WILL REGISTER' : 'dry run (GO = false)'}`);
       let at = null;
