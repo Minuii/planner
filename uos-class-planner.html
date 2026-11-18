@@ -285,6 +285,15 @@ textarea{min-height:160px;font-family:var(--mono);font-size:12px}
         <label class="flabel" for="crnIn">Test CRNs: paste a list to load it into the timetable</label>
         <div style="display:flex;gap:6px"><input id="crnIn" type="text" placeholder="11960 11961 12072 12073"><button id="crnLoad" class="small">Load</button></div>
       </div>
+      <div class="crnTest">
+        <label class="flabel" for="planName">Saved plans</label>
+        <div style="display:flex;gap:6px"><input id="planName" type="text" placeholder="Name, e.g. Plan A"><button id="planSave" class="small">Save current</button></div>
+        <div id="planList" class="picks" style="margin-top:8px"></div>
+      </div>
+      <div class="crnTest">
+        <label class="tiny"><input type="checkbox" id="watch"> Notify me when seats or new sections open in my courses</label>
+        <div id="watchNote" class="tiny muted" style="margin-top:4px"></div>
+      </div>
     </section>
   </aside>
 </main>
@@ -441,7 +450,7 @@ const LS='uosPlanner.v1';
 const DEF_FILTERS={days:'UMTWRFS',from:'',to:'',noCampus:[],noGrp:[],profs:[],open:false,dayTimes:{},noProfs:[],breakFrom:'',breakTo:'',noTba:false};
 
 let DATA=null, COURSES=new Map(), PKG=new Map(), SEC=new Map(), CAMPUSES=[], DAYS_IN_DATA='MTWRF';
-let S={courses:[],picks:{},excluded:{},include:{},filters:{...DEF_FILTERS},h12:true,genSort:'days',maxDays:0,keepPicks:false,tab:'browse',showFiltered:false,sort:'section'};
+let S={courses:[],picks:{},excluded:{},include:{},filters:{...DEF_FILTERS},h12:true,genSort:'days',maxDays:0,keepPicks:false,tab:'browse',showFiltered:false,sort:'section',plans:[],watch:false};
 let preview=null, genLimit=24;
 
 function load(){
@@ -805,8 +814,31 @@ function renderAll(){
   document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===S.tab));
   $('#genSort').value=S.genSort;$('#maxDays').value=S.maxDays;$('#keepPicks').checked=S.keepPicks;
   if(S.tab==='browse')renderBrowse();else{genLimit=24;renderGen();}
-  renderTT();
+  renderTT();renderPlans();
 }
+function renderPlans(){
+  $('#planList').innerHTML=S.plans.map((p,i)=>`<div class="pick" style="--c:var(--border)"><div><b>${esc(p.name)}</b><div class="crn">${p.crns.join(' ')||'no sections picked'}</div></div><div style="display:flex;gap:4px"><button class="small" data-planload="${i}">Load</button><button class="small ghost" data-plandel="${i}" aria-label="Delete ${esc(p.name)}">✕</button></div></div>`).join('');
+  $('#watch').checked=S.watch;
+  $('#watchNote').textContent=!S.watch?'':!/^http/.test(location.protocol)?'Only works on the online planner (minuii.github.io/planner).':'Checks every 5 minutes while this tab is open.';
+}
+/* watcher: re-download the published data and compare seats / sections for my courses */
+async function checkSeats(){
+  if(!S.watch||!DATA||!/^http/.test(location.protocol))return;
+  let d;try{d=normalize(await (await fetch(`uos-classes-${DATA.term}.json?t=${Date.now()}`,{cache:'no-store'})).text());}catch(e){return;}
+  if(d.term!==DATA.term||d.fetchedAt===DATA.fetchedAt)return;
+  const old=new Map(DATA.sections.map(s=>[s.crn,s])),msgs=[];
+  d.sections.filter(s=>S.courses.includes(s.subj+s.num)).forEach(s=>{
+    const o=old.get(s.crn),name=`${s.subj} ${s.num} sec ${s.seq} (CRN ${s.crn})`;
+    if(!o)msgs.push(`New section: ${name}, ${s.seats} seats`);
+    else if(o.seats<=0&&s.seats>0)msgs.push(`Seats open: ${name}, ${s.seats} free`);
+  });
+  setData(d,false);update();
+  if(!msgs.length)return;
+  toast(msgs[0]+(msgs.length>1?` (+${msgs.length-1} more)`:''));
+  try{const a=new AudioContext(),o=a.createOscillator();o.connect(a.destination);o.frequency.value=880;o.start();setTimeout(()=>o.stop(),500);}catch(e){}
+  if(window.Notification&&Notification.permission==='granted')new Notification('UoS planner',{body:msgs.join('\n')});
+}
+setInterval(checkSeats,5*60*1000);
 function update(){save();renderAll();}
 
 function addCourse(k){if(!S.courses.includes(k)){S.courses.push(k);}}
@@ -846,6 +878,14 @@ document.addEventListener('click',e=>{
   else if(d.tab){S.tab=d.tab;update();}
   else if(t.id==='genMore'){genLimit+=24;renderGen();}
   else if(d.close!=null){t.closest('dialog').close();}
+  else if(d.planload!=null){const p=S.plans[+d.planload];S.courses=p.courses.filter(k=>COURSES.has(k));S.picks={};$('#crnIn').value=p.crns.join(' ');if(p.crns.length)loadCrns();else update();toast(`Loaded ${p.name}`);}
+  else if(d.plandel!=null){const p=S.plans[+d.plandel];if(confirm(`Delete plan "${p.name}"?`)){S.plans.splice(+d.plandel,1);update();}}
+  else if(t.id==='planSave'){
+    const name=$('#planName').value.trim()||`Plan ${S.plans.length+1}`;
+    const plan={name,courses:[...S.courses],crns:S.courses.flatMap(k=>S.picks[k]?PKG.get(S.picks[k]).secs.map(s=>s.crn):[])};
+    const i=S.plans.findIndex(p=>p.name===name);if(i>=0)S.plans[i]=plan;else S.plans.push(plan);
+    $('#planName').value='';update();toast(`Saved ${name}`);
+  }
 });
 document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('.chip')){e.preventDefault();e.target.click();}});
 document.addEventListener('change',e=>{
@@ -864,6 +904,7 @@ document.addEventListener('change',e=>{
   else if(t.id==='genSort'){S.genSort=t.value;update();}
   else if(t.id==='maxDays'){S.maxDays=+t.value;update();}
   else if(t.id==='keepPicks'){S.keepPicks=t.checked;update();}
+  else if(t.id==='watch'){S.watch=t.checked;if(S.watch&&window.Notification&&Notification.permission==='default')Notification.requestPermission();update();checkSeats();}
 });
 $('#fInstr').addEventListener('input',renderProfList);
 $('#clearProfs').onclick=()=>{S.filters.profs=[];S.filters.noProfs=[];update();};
